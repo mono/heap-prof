@@ -26,7 +26,7 @@ class Shell : Window {
 		Application.Run ();
 	}
 	
-	public Shell () : base ("Bllah")
+	public Shell () : base ("Mono Heap Profiler")
 	{
 		
 		entries = new ActionEntry[] {
