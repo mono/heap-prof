@@ -19,7 +19,7 @@ class BacktraceViewerComponent : ShellComponent {
 		
 		this.data = data;
 		this.p = p;
-		this.bt = new BacktraceTabulator (p, data.ContextData);
+		this.bt = new BacktraceTabulator (p, p.GetContextObjsForTime (data.Time));
 		
 		Title = string.Format ("Heap at {0} ms", data.Time);
 		

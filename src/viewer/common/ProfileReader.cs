@@ -5,22 +5,38 @@ public abstract class ProfileReader {
 	
 	public Profile Profile;
 	BinaryReader br;
+	int end_t = int.MaxValue;
+	long startpos;
 	
 	public ProfileReader (Profile p)
 	{
 		Profile = p;
 	}
 	
+	public ProfileReader (Profile p, long startpos, int end_t)
+	{
+		this.startpos = startpos;
+		this.end_t = end_t;
+		Profile = p;
+	}
+	
+	int context_size;
+	int type_size;
+	
 	public void Read ()
 	{
 		using (br = new BinaryReader (File.OpenRead (Profile.Filename))) {
+			
 			ProfilerSignature.ReadHeader (br, true);
 			
+			if (startpos != 0)
+				br.BaseStream.Seek (startpos, SeekOrigin.Begin);
+		
 			while (true) {
 				int time = br.ReadInt32 ();
 				
 				// end of file
-				if (time == -1)
+				if (time == -1 || time > end_t)
 					return;
 				
 				if ((time & (int)(1 << 31)) == 0) {
@@ -43,12 +59,11 @@ public abstract class ProfileReader {
 						GcHeapResize (time, event_num, br.ReadInt32 ());
 						break;
 					case EventType.Checkpoint:
-						int context_size = br.ReadInt32 ();
-						int type_size = br.ReadInt32 ();
-					
-						int cb = (context_size + type_size) * 4;
-					
-						br.BaseStream.Seek (cb, SeekOrigin.Current);
+						context_size = br.ReadInt32 ();
+						type_size = br.ReadInt32 ();
+						
+						Checkpoint (time, event_num);
+
 						break;
 					}						
 				}
@@ -77,6 +92,26 @@ public abstract class ProfileReader {
 		
 	protected virtual void GcHeapResize (int time, int event_num, int new_size)
 	{
+	}
+	
+	
+	protected void ReadCheckpoint (out int [] type_data, out int [] ctx_insts)
+	{
+		ctx_insts = new int [ContextTableSize];
+		type_data = new int [TypeTableSize];
+		
+		for (int i = 0; i < context_size; i ++)
+			ctx_insts [i] = br.ReadInt32 ();
+		
+		
+		for (int i = 0; i < type_size; i ++)
+			type_data [i] = br.ReadInt32 ();
+	}
+		
+	protected virtual void Checkpoint (int time, int event_num)
+	{
+		int cb = (context_size + type_size) * 4;
+		br.BaseStream.Seek (cb, SeekOrigin.Current);
 	}
 	
 	
@@ -141,6 +176,25 @@ public class Metadata {
 	public Context GetContext (int idx)
 	{
 		return contextTable [idx];
+	}
+	
+	public int GetTimelineBefore (EventType e, int time)
+	{
+		int last = -1;
+		for (int i = 0; i < timeline.Length; i ++) {
+			if (timeline [i].Event == e)
+				last = i;
+			
+			if (timeline [i].Time >= time)
+				break;
+		}
+		
+		return last;
+	}
+	
+	public Timeline GetTimeline (int idx)
+	{
+		return timeline [idx];
 	}
 	
 	

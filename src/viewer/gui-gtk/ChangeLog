@@ -1,5 +1,7 @@
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
+	* BacktraceViewer.cs: Lazy load context data.
+
 	* Shell.cs, TypeGraphViewer.cs, BacktraceViewer.cs: A bit of
 	refactoring.
 	

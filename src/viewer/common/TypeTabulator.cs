@@ -5,7 +5,6 @@ using System.Collections;
 class TimeData {
 	public int Time;
 	public int [] TypeData;
-	public int [] ContextData;
 	public int OtherSize;
 	public int TotalSize;
 	public int HeapSize;
@@ -31,7 +30,6 @@ class TypeTabulator : ProfileReader {
 	{
 		Data = new ArrayList ();
 		current_type_data = new int [TypeTableSize];
-		current_context_data = new int [ContextTableSize];
 	}
 	
 	void Split (int time)
@@ -39,7 +37,6 @@ class TypeTabulator : ProfileReader {
 		TimeData td = new TimeData ();
 		td.Time = time - 1;
 		td.TypeData = (int []) current_type_data.Clone ();
-		td.ContextData = (int []) current_context_data.Clone ();
 		td.HeapSize = cur_heap_size;
 		
 		foreach (int i in td.TypeData)
@@ -65,7 +62,6 @@ class TypeTabulator : ProfileReader {
 		SplitIfNeeded (time);
 		
 		current_type_data [ctx.Type] += ctx.Size;
-		current_context_data [ctx.Id] ++;
 	}
 	
 	protected override void GcSeen (int time, int gc_num)
@@ -91,7 +87,6 @@ class TypeTabulator : ProfileReader {
 	protected override void GcFreedSeen (int time, Context ctx, long pos)
 	{
 		current_type_data [ctx.Type] -= ctx.Size;
-		current_context_data [ctx.Id] --;
 	}
 	
 	public void Dump ()
