@@ -1,1 +1,3 @@
-SUBDIRS= viewer runtime-profiler memstat
+SUBDIRS= viewer runtime-profiler
+# disabled until I get something that really works
+# memstat
