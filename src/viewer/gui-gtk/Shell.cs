@@ -121,7 +121,8 @@ class Shell : Window {
 	public void Add (ShellComponent sc)
 	{
 		sc.parent = this;
-		int pos = pager.AppendPage (sc, new Label (""));
+		int pos = pager.AppendPage (sc);
+		
 		TitleChanged (sc);
 		
 		pager.ShowAll ();
@@ -130,6 +131,6 @@ class Shell : Window {
 	
 	public void TitleChanged (ShellComponent sc)
 	{
-		((Label) pager.GetTabLabel (sc)).Text = sc.Title;
+		pager.TitleChanged (sc);
 	}
 }

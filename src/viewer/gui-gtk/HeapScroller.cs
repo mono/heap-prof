@@ -101,8 +101,10 @@ public class HeapScroller : Bin {
 
 	protected override void OnUnrealized () 
 	{
-		event_window.Dispose ();
+		event_window.Destroy ();
 		event_window = null;
+		
+		base.OnUnrealized ();
 	}
 	
 	protected void ScrollChanged ()
