@@ -22,7 +22,7 @@ Index: libgc/include/gc.h
 +			 * alive at a given time.
 +			 */
 +			 
-+GC_API GC_PTR (*GC_profile_heap_resize) GC_PROTO((int new_size));
++GC_API GC_PTR (*GC_on_heap_resize) GC_PROTO((int new_size));
 +			/* Invoked when the heap grows                  */
 +
 +/* Slow/general mark bit manipulation: */
@@ -103,7 +103,7 @@ Index: libgc/alloc.c
  }
  
 +GC_PTR (*GC_profile_collect) GC_PROTO((GCProfileEvent e));
-+GC_PTR (*GC_profile_heap_resize) GC_PROTO((int new_size));
++GC_PTR (*GC_on_heap_resize) GC_PROTO((int new_size));
 +
  /* Finish up a collection.  Assumes lock is held, signals are disabled,	*/
  /* but the world is otherwise running.					*/
@@ -143,8 +143,8 @@ Index: libgc/alloc.c
          if (GC_collect_at_heapsize < GC_heapsize /* wrapped */)
           GC_collect_at_heapsize = (word)(-1);
  #     endif
-+	if (GC_profile_heap_resize)
-+		GC_profile_heap_resize (GC_heapsize);
++	if (GC_on_heap_resize)
++		GC_on_heap_resize (GC_heapsize);
 +	
      return(TRUE);
  }
@@ -394,7 +394,7 @@ Index: mono/metadata/gc.c
 +
 +#ifdef USE_INCLUDED_LIBGC
 +	GC_profile_collect = on_gc_profile_collect;
-+	GC_profile_heap_resize = on_gc_profile_heap_resize;
++	GC_on_heap_resize = on_gc_profile_heap_resize;
 +#endif
  	
  	MONO_GC_REGISTER_ROOT (gc_handles);
