@@ -172,12 +172,12 @@ public class Metadata {
 	int [][] backtraceTable;
 	Context [] contextTable;
 	Timeline [] timeline;
-	long [] type_total_allocs;
+	long [] type_max;
 	
 	public int TypeTableSize { get { return typeTable.Length; } }
 	public int ContextTableSize { get { return contextTable.Length; } }
 	public Timeline [] Timeline { get { return timeline; } }
-	public long [] TypeTotalAllocs { get { return type_total_allocs; } }
+	public long [] TypeMax { get { return type_max; } }
 	
 	public string GetTypeName (int idx)
 	{
@@ -233,7 +233,7 @@ public class Metadata {
 			backtraceTable = ReadBacktraceTable (br);
 			contextTable = ReadContextTable (br);
 			timeline = ReadTimeline (br);
-			type_total_allocs = ReadTypeTotalAllocationsTable (br);
+			type_max = ReadTypeMaxTable (br);
 		}
 	}
 	
@@ -247,7 +247,7 @@ public class Metadata {
 		}
 	}
 	
-	long [] ReadTypeTotalAllocationsTable (BinaryReader br)
+	long [] ReadTypeMaxTable (BinaryReader br)
 	{
 		int sz = br.ReadInt32 ();
 		

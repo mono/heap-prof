@@ -210,14 +210,9 @@ class TypeList {
 	{
 		int num = 0;
 		
-		long total_size = 0;
+		long threshold = p.MaxSize / 100;
 		
-		foreach (long l in p.Metadata.TypeTotalAllocs)
-			total_size += l;
-		
-		long threshold = total_size / 1000;
-		
-		foreach (long l in p.Metadata.TypeTotalAllocs)
+		foreach (long l in p.Metadata.TypeMax)
 			if (l > threshold)
 				num ++;
 			
@@ -227,9 +222,9 @@ class TypeList {
 		TypeBrushes = new Brush [num];
 			
 		num = 0;
-		for (int i = 0; i < p.Metadata.TypeTotalAllocs.Length; i ++) {
-			if (p.Metadata.TypeTotalAllocs [i] > threshold) {
-				Sizes [num] = p.Metadata.TypeTotalAllocs [i];
+		for (int i = 0; i < p.Metadata.TypeMax.Length; i ++) {
+			if (p.Metadata.TypeMax [i] > threshold) {
+				Sizes [num] = p.Metadata.TypeMax [i];
 				TypeIndexes [num] = i;
 				num ++;
 			}
