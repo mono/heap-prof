@@ -144,7 +144,7 @@ get_method_idx (MonoProfiler *p, MonoMethod* m)
 		g_hash_table_insert (p->method_to_table_idx, m, idx_plus_one);
 	}
 	
-	return idx_plus_one - 1;
+	return leu32 (idx_plus_one - 1);
 }
 
 static guint32
