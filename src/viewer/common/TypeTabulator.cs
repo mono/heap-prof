@@ -78,7 +78,7 @@ class TypeTabulator : ProfileReader {
 		last_time = time;
 	}
 	
-	protected override void GcHeapResize (int time, int new_size)
+	protected override void GcHeapResize (int time, int event_num, int new_size)
 	{
 		// Splitting twice here gives nice graphs, since you get a strait line
 		Split (time);

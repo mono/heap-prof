@@ -14,8 +14,14 @@
 #include <mono/metadata/profiler.h>
 
 #define leu32 GUINT32_TO_LE
+#define lnatu32 GUINT32_FROM_LE
 #define leu64 GINT64_TO_LE
 
+typedef enum {
+	HEAP_PROF_EVENT_GC = 0,
+	HEAP_PROF_EVENT_RESIZE_HEAP = 1,
+	HEAP_PROF_EVENT_CHECKPOINT = 2
+} HeapProfEvent;
 
 typedef struct AllocRec AllocRec;
 
@@ -51,6 +57,18 @@ struct _MonoProfiler {
 	AllocRec* live_allocs;
 	guint32 t_zero;
 	guint64 foffset;
+	
+	int context_live_objects_size;
+	int* context_live_objects;
+	
+	int type_live_data_size;
+	int* type_live_data;
+	
+	int total_live_bytes;
+	
+	GPtrArray* timeline;
+	
+	guint64 last_checkpoint;
 };
 
 
@@ -70,9 +88,11 @@ static const guint8 heap_prof_md_sig [] = {
 	0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 };
 
-static const guint32 heap_prof_version = 3;
+static const guint32 heap_prof_version = 4;
 
 #define BT_SIZE 5
+
+#define CHECKPOINT_SPACING (1024*1024) /* 1 MB */
 
 typedef struct {
 	guint8 signature [16];
@@ -85,17 +105,39 @@ typedef struct {
 } HeapProfAllocationRec;
 
 
+typedef struct {
+	guint32 time;
+	HeapProfEvent event;
+	guint32 event_num;
+	
+	guint32 context_size;
+	guint32 type_size;
+} HeapProfCheckpointRec;
 
 typedef struct {
 	guint32 time;
-	guint32 gc_num;
+	HeapProfEvent event;
+	guint32 event_num;
+	
 	HeapProfGcFreedRec freed [MONO_ZERO_LEN_ARRAY];
 } HeapProfGCRec;
 
 typedef struct {
 	guint32 time;
-	guint32 new_size; /* high bit is set */
-} HeapProfGCHeapResize;
+	HeapProfEvent event;
+	guint32 event_num;
+	
+	guint32 new_size;
+} HeapProfHeapResizeRec;
+
+typedef struct {
+	guint32 time;
+	HeapProfEvent event;
+	guint32 size_high;
+	guint32 size_low;
+	
+	guint64 file_pos;
+} HeapProfTimelineRec;
 
 static guint32
 get_delta_t (MonoProfiler *p)
@@ -133,7 +175,15 @@ typedef struct {
 	guint32 bt;
 } IdxAllocationCtx;
 
+#define resize_array(arr, old_size, new_size) do { \
+	gpointer __x = g_malloc0 ((new_size) * sizeof (*arr)); \
+	if (arr) \
+		memcpy (__x, arr, (old_size) * sizeof (*arr)); \
+	arr = __x; \
+	old_size = (new_size); \
+} while (0)
 
+	
 static guint32
 get_method_idx (MonoProfiler *p, MonoMethod* m)
 {
@@ -161,6 +211,9 @@ get_type_idx (MonoProfiler *p, MonoClass* klass)
 		idx_plus_one = p->klass_table->len;
 		
 		g_hash_table_insert (p->klass_to_table_idx, klass, idx_plus_one);
+		
+		if (idx_plus_one > p->type_live_data_size)
+			resize_array (p->type_live_data, p->type_live_data_size, MAX (p->type_live_data_size << 1, idx_plus_one));
 	}
 	
 	return leu32 (idx_plus_one - 1);
@@ -210,9 +263,32 @@ get_ctx_idx (MonoProfiler *p, AllocationCtx* ctx)
 		idx_plus_one = p->ctx_table->len;
 		
 		g_hash_table_insert (p->ctx_to_table_idx, g_memdup (ctx, sizeof (*ctx)), idx_plus_one);
+		
+
+		if (idx_plus_one > p->context_live_objects_size)
+			resize_array (p->context_live_objects, p->context_live_objects_size, MAX (p->context_live_objects_size << 1, idx_plus_one));
 	}
 	
 	return leu32 (idx_plus_one - 1);
+}
+
+static void
+record_obj (MonoProfiler* p, guint32 ctx_idx, gboolean is_alloc)
+{
+	guint32 cidx = lnatu32 (ctx_idx);
+	IdxAllocationCtx* ctx = g_ptr_array_index (p->ctx_table, cidx);
+	guint32 tidx = lnatu32 (ctx->klass);
+	guint32 size = lnatu32 (ctx->size);
+	
+	if (is_alloc) {
+		p->total_live_bytes += size;
+		p->type_live_data [tidx] += size;
+		p->context_live_objects [cidx] ++;
+	} else {
+		p->total_live_bytes -= size;
+		p->type_live_data [tidx] -= size;
+		p->context_live_objects [cidx] --;
+	}
 }
 
 typedef struct {
@@ -231,6 +307,52 @@ get_bt (MonoMethod *m, gint no, gint ilo, gboolean managed, AllocBTData* data)
 	return data->pos == BT_SIZE;
 }
 
+
+static void
+write_checkpoint_if_needed (MonoProfiler* p)
+{
+	HeapProfCheckpointRec rec;
+	HeapProfTimelineRec* trec;
+	
+	guint32* ctx_rec;
+	guint32* type_rec;
+	
+	guint64 pos;
+	guint32 time = get_delta_t (p);
+	int i;
+	
+	if (p->last_checkpoint + CHECKPOINT_SPACING > p->foffset)
+		return;
+	
+	trec = g_new0 (HeapProfTimelineRec, 1);
+	rec.time = leu32 (time | (1 << 31));
+	rec.event = leu32 (HEAP_PROF_EVENT_CHECKPOINT);
+	rec.event_num = p->timeline->len + 1;
+	rec.context_size = leu32 (p->ctx_table->len);
+	rec.type_size = leu32 (p->klass_table->len);
+	
+	ctx_rec = g_newa (guint32, p->ctx_table->len);
+	type_rec = g_newa (guint32, p->klass_table->len);
+	
+	for (i = 0; i < p->ctx_table->len; i ++)
+		ctx_rec [i] = leu32 (p->context_live_objects [i]);
+	
+	for (i = 0; i < p->klass_table->len; i ++)
+		type_rec [i] = leu32 (p->type_live_data [i]);
+	
+	pos = prof_write (p, &rec, sizeof (rec));
+	prof_write (p, ctx_rec, sizeof (*ctx_rec) * p->ctx_table->len);
+	prof_write (p, type_rec, sizeof (*type_rec) * p->klass_table->len);
+	
+	trec->time = leu32 (time);
+	trec->event = leu32 (HEAP_PROF_EVENT_CHECKPOINT);
+	trec->file_pos = leu64 (pos);
+	
+	g_ptr_array_add (p->timeline, trec);
+	
+	p->last_checkpoint = p->foffset;
+}
+
 static void
 write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 {
@@ -238,6 +360,7 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	AllocationCtx c = {0};
 	guint32 offset;
 	HeapProfAllocationRec rec;
+	guint32 ctx_idx;
 	AllocRec* arec = g_new0 (AllocRec, 1);
 	
 	btd.c = &c;
@@ -248,9 +371,10 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	c.size = mono_object_get_size (obj);	
 	
 	hp_lock_enter ();
+	ctx_idx = get_ctx_idx (p, &c);
 
 	rec.time = leu32  (get_delta_t (p));
-	rec.alloc_ctx = get_ctx_idx (p, &c);
+	rec.alloc_ctx = ctx_idx;
 
 	offset = prof_write (p, &rec, sizeof (rec));
 	
@@ -261,6 +385,10 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	arec->next = p->live_allocs;
 	p->live_allocs = arec;
 	
+	record_obj (p, ctx_idx, TRUE);
+	
+	write_checkpoint_if_needed (p);
+	
 	hp_lock_leave ();
 }
 
@@ -268,13 +396,21 @@ static void
 prof_marks_set (MonoProfiler *p, int gc_num)
 {
 	HeapProfGCRec rec;
-
+	HeapProfTimelineRec* trec = g_new0 (HeapProfTimelineRec, 1);
+	
+	guint64 pos;
+	guint32 time = get_delta_t (p);
+	guint32 old_size;
+	
 	hp_lock_enter ();
 	
-	rec.time = leu32 (get_delta_t (p) | (1 << 31));
-	rec.gc_num = leu32 (gc_num);
+	old_size = p->total_live_bytes;
+	
+	rec.time = leu32 (time | (1 << 31));
+	rec.event = leu32 (HEAP_PROF_EVENT_GC);
+	rec.event_num = p->timeline->len + 1;
 
-	prof_write (p, &rec, sizeof (rec));
+	pos = prof_write (p, &rec, sizeof (rec));
 	
 	AllocRec *l, *next = NULL, *prev = NULL;
 	for (l = p->live_allocs; l; l = next) {
@@ -282,6 +418,8 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 		
 		if (! mono_profiler_mark_set (l->obj)) {
 			prof_write (p, &l->rec, sizeof (l->rec));
+			
+			record_obj (p, l->rec.alloc_ctx, FALSE);
 			
 			if (prev)
 				prev->next = next;
@@ -298,20 +436,41 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 		prof_write (p, &null, sizeof (null));
 	}
 	
+	trec->time = leu32 (time);
+	trec->event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
+	trec->size_high = leu32 (old_size);
+	trec->size_low = leu32 (p->total_live_bytes);
+	trec->file_pos = leu64 (pos);
+	
+	g_ptr_array_add (p->timeline, trec);
+	
 	hp_lock_leave ();
 }
 
 static void
 prof_heap_resize (MonoProfiler *p, int new_size)
 {
-	HeapProfGCHeapResize rec;
+	HeapProfHeapResizeRec rec;
+	HeapProfTimelineRec* trec = g_new0 (HeapProfTimelineRec, 1);
 
+	guint64 pos;
+	guint32 time = get_delta_t (p);
+	
 	hp_lock_enter ();
 	
-	rec.time = leu32 (get_delta_t (p) | (1 << 31));
-	rec.new_size = leu32 (new_size | (1 << 31));
+	rec.time = leu32 (time | (1 << 31));
+	rec.event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
+	rec.new_size = leu32 (new_size);
+	rec.event_num = p->timeline->len + 1;
 	
-	prof_write (p, &rec, sizeof (rec));
+	pos = prof_write (p, &rec, sizeof (rec));
+	
+	trec->time = leu32 (time);
+	trec->event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
+	trec->size_high = leu32 (new_size);
+	trec->file_pos = leu64 (pos);
+	
+	g_ptr_array_add (p->timeline, trec);
 	
 	hp_lock_leave ();
 }
@@ -349,34 +508,14 @@ write_string_table (MonoProfiler* p, GPtrArray* arr)
 }
 
 static void
-write_bt_table (MonoProfiler* p)
+write_data_table (MonoProfiler* p, GPtrArray* arr, guint32 elesz)
 {
-	GPtrArray* arr = p->bt_table;
 	int i;
 	guint32 size = leu32 (arr->len);
 	prof_write (p, &size, sizeof (size));
 	
-	for (i = 0; i < arr->len; i ++) {
-		IdxBacktrace* b = g_ptr_array_index (arr, i);
-		prof_write (p, b, sizeof (*b));
-	}
-}
-
-static void
-write_ctx_table (MonoProfiler* p)
-{
-	GPtrArray* arr = p->ctx_table;
-	int i;
-	guint32 size = leu32 (arr->len);
-	
-	prof_write (p, &size, sizeof (size));
-	
-	for (i = 0; i < arr->len; i ++) {
-		IdxAllocationCtx* c = g_ptr_array_index (arr, i);
-
-		
-		prof_write (p, c, sizeof (*c));
-	}
+	for (i = 0; i < arr->len; i ++)
+		prof_write (p, g_ptr_array_index (arr, i), elesz);
 }
 
 static void
@@ -397,8 +536,9 @@ write_metadata_file (MonoProfiler* p)
 	
 	write_string_table (p, p->klass_table);
 	write_string_table (p, p->method_table);
-	write_bt_table (p);
-	write_ctx_table (p);
+	write_data_table (p, p->bt_table, sizeof (IdxBacktrace));
+	write_data_table (p, p->ctx_table, sizeof (IdxAllocationCtx));
+	write_data_table (p, p->timeline, sizeof (HeapProfTimelineRec));
 }
 
 
@@ -472,8 +612,6 @@ bt_eq (const Backtrace* a, const Backtrace* b)
 void
 mono_profiler_startup (const char *desc)
 {
-	const char* file;
-	char* dump_file;
 	MonoProfiler* p = g_new0 (MonoProfiler, 1);
 	
 	InitializeCriticalSection (&hp_lock);
@@ -494,6 +632,7 @@ mono_profiler_startup (const char *desc)
 	p->method_table = g_ptr_array_new ();
 	p->bt_table     = g_ptr_array_new ();
 	p->ctx_table    = g_ptr_array_new ();
+	p->timeline     = g_ptr_array_new ();
 	
 	
 	p->out = fopen (p->file, "w+");

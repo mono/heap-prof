@@ -32,12 +32,25 @@ public abstract class ProfileReader {
 				} else {
 					time &= int.MaxValue;
 					
-					int data = br.ReadInt32 ();
+					EventType event_type = (EventType) br.ReadInt32 ();
+					int event_num = br.ReadInt32 ();
 					
-					if ((data & (int)(1 << 31)) == 0)
-						GcSeen (time, data);
-					else
-						GcHeapResize (time, (data & int.MaxValue));
+					switch (event_type) {
+					case EventType.GC:
+						GcSeen (time, event_num);
+						break;
+					case EventType.HeapResize:
+						GcHeapResize (time, event_num, br.ReadInt32 ());
+						break;
+					case EventType.Checkpoint:
+						int context_size = br.ReadInt32 ();
+						int type_size = br.ReadInt32 ();
+					
+						int cb = (context_size + type_size) * 4;
+					
+						br.BaseStream.Seek (cb, SeekOrigin.Current);
+						break;
+					}						
 				}
 					
 			}
@@ -59,10 +72,10 @@ public abstract class ProfileReader {
 	}
 	
 	protected abstract void AllocationSeen (int time, Context ctx, long pos);
-	protected abstract void GcSeen (int time, int gc_num);
+	protected abstract void GcSeen (int time, int event_num);
 	protected abstract void GcFreedSeen (int time, Context ctx, long pos);
 		
-	protected virtual void GcHeapResize (int time, int new_size)
+	protected virtual void GcHeapResize (int time, int event_num, int new_size)
 	{
 	}
 	
@@ -105,6 +118,7 @@ public class Metadata {
 	string [] methodTable;
 	int [][] backtraceTable;
 	Context [] contextTable;
+	Timeline [] timeline;
 	
 	public int TypeTableSize { get { return typeTable.Length; } }
 	public int ContextTableSize { get { return contextTable.Length; } }
@@ -143,6 +157,7 @@ public class Metadata {
 			methodTable = ReadStringTable (br);
 			backtraceTable = ReadBacktraceTable (br);
 			contextTable = ReadContextTable (br);
+			timeline = ReadTimeline (br);
 		}
 	}
 	
@@ -203,6 +218,24 @@ public class Metadata {
 		
 		return d;
 	}
+	
+	Timeline [] ReadTimeline (BinaryReader br)
+	{
+		
+		int sz = br.ReadInt32 ();
+		Timeline [] d = new Timeline [sz];
+		
+		for (int i = 0; i < sz; i ++) {
+			d [i].Id = i;
+			d [i].Time = br.ReadInt32 ();
+			d [i].Event = (EventType) br.ReadInt32 ();
+			d [i].SizeHigh = br.ReadInt32 ();
+			d [i].SizeLow = br.ReadInt32 ();
+			d [i].FilePos = br.ReadInt64 ();
+		}
+		
+		return d;
+	}
 }
 
 class ProfilerSignature {
@@ -216,7 +249,7 @@ class ProfilerSignature {
 		0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 	};
 	
-	const int Version = 3;
+	const int Version = 4;
 	
 	public static void ReadHeader (BinaryReader br, bool is_dump)
 	{
@@ -233,6 +266,20 @@ class ProfilerSignature {
 			throw new Exception (String.Format ("Wrong version: expected {0}, got {1}", Version, ver));
 	}
 	
+}
+
+public enum EventType {
+	GC = 0,
+	HeapResize = 1,
+	Checkpoint = 2
+}
+
+public struct Timeline {
+	public int Id;
+	public int Time;
+	public EventType Event;
+	public int SizeHigh, SizeLow;
+	public long FilePos;
 }
 
 public struct Context {

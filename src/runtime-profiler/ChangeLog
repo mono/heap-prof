@@ -1,3 +1,9 @@
+2005-01-16  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c: Emit dumps of the heap about every MB of
+	data. This will allow the reader to do stuff faster. Also, emit
+	tables of the size of the heap over time
+
 2005-01-15  Ben Maurer  <bmaurer@ximian.com>
 
 	* gc-profiler.c: Emit heap size info. File format updates.

@@ -1,5 +1,9 @@
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
+	* ProfileReader.cs: Update file format
+
+	* TypeTabulator.cs: cope with changes
+
 	* *.cs: Factor Profile out.
 	
 	* Profile.cs: New file.
