@@ -1,3 +1,7 @@
+2005-01-20  Ben Maurer  <bmaurer@ximian.com>
+
+	* Profile.cs, ProfileReader.cs: add stuff to get timeline
+
 2005-01-17  Ben Maurer  <bmaurer@ximian.com>
 
 	* ProfileReader.cs (GetTimelineBefore): Make this actually get the

@@ -1,3 +1,7 @@
+2005-01-20  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c (prof_marks_set): Fix typo
+
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
 	* gc-profiler.c: Emit dumps of the heap about every MB of

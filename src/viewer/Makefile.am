@@ -15,7 +15,8 @@ gtk_sources = \
 	$(srcdir)/gui-gtk/BacktraceViewer.cs \
 	$(srcdir)/gui-gtk/Shell.cs \
 	$(srcdir)/gui-gtk/ShellComponent.cs \
-	$(srcdir)/gui-gtk/ShellPager.cs
+	$(srcdir)/gui-gtk/ShellPager.cs \
+	$(srcdir)/gui-gtk/HeapScroller.cs
 
 gtk_resources = \
 	$(srcdir)/gui-gtk/shell-ui.xml

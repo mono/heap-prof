@@ -96,4 +96,8 @@ public class Profile {
 	public int ContextTableSize {
 		get { return Metadata.ContextTableSize; }
 	}
+	
+	public Timeline [] Timeline {
+		get { return Metadata.Timeline; }
+	}
 }

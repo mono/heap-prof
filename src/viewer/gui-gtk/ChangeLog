@@ -1,3 +1,9 @@
+2005-01-20  Ben Maurer  <bmaurer@ximian.com>
+
+	* TypeGraphViewer.cs: add the heap scroller in an ifdef
+
+	* HeapScroller.cs: New file.
+
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
 	* BacktraceViewer.cs: Lazy load context data.

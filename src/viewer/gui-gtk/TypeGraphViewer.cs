@@ -11,6 +11,8 @@ class TypeGraphComponent : ShellComponent {
 	TypeTabulator t;
 	TypeList tl;
 	HPaned paned;
+	VBox box;
+	HeapScroller scroller;
 	
 	public TypeGraphComponent (Profile p)
 	{
@@ -24,6 +26,11 @@ class TypeGraphComponent : ShellComponent {
 		this.t = t;
 		tl = new TypeList (t);
 		
+		box = new VBox ();
+		box.Spacing = 12;
+		
+
+		
 		paned = new HPaned ();
 		
 		d = new PrettyGraphic (t, tl, this);
@@ -36,8 +43,15 @@ class TypeGraphComponent : ShellComponent {
 		paned.Pack1 (d, true, true);
 		paned.Pack2 (sw, false, true);
 
+		Add (box);
 
-		Add (paned);
+#if false
+		scroller = new HeapScroller (p);
+		
+		box.PackStart (scroller, false, false, 0);
+#endif
+
+		box.PackStart (paned, true, true, 0);
 	}
 }
 

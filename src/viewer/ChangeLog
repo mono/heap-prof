@@ -1,3 +1,7 @@
+2005-01-20  Ben Maurer  <bmaurer@ximian.com>
+
+	* Makefile.am: Add new stuff to build
+
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
 	* Makefile.am: Add Profile.cs

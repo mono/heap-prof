@@ -149,6 +149,10 @@ public abstract class ProfileReader {
 	public int ContextTableSize {
 		get { return Profile.ContextTableSize; }
 	}
+	
+	public Timeline [] Timeline {
+		get { return Profile.Timeline; }
+	}
 }
 
 public class Metadata {
@@ -164,6 +168,7 @@ public class Metadata {
 	
 	public int TypeTableSize { get { return typeTable.Length; } }
 	public int ContextTableSize { get { return contextTable.Length; } }
+	public Timeline [] Timeline { get { return timeline; } }
 	
 	public string GetTypeName (int idx)
 	{

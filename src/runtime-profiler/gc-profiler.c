@@ -437,7 +437,7 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 	}
 	
 	trec->time = leu32 (time);
-	trec->event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
+	trec->event = leu32 (HEAP_PROF_EVENT_GC);
 	trec->size_high = leu32 (old_size);
 	trec->size_low = leu32 (p->total_live_bytes);
 	trec->file_pos = leu64 (pos);
