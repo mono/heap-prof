@@ -1,3 +1,7 @@
+2005-01-16  Ben Maurer  <bmaurer@ximian.com>
+
+	* Shell.cs (OnOpen): Add filter for heap prof files
+
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>
 
 	* TypeGraphViewer.cs: Make the TypeListTreeNode a list only node

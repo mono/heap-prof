@@ -1,3 +1,9 @@
+2005-01-16  Ben Maurer  <bmaurer@ximian.com>
+
+	* configure.in: Add some checks for mime type crap
+
+	* Makefile.am (SUBDIRS): Add mime-data
+
 2005-01-15  Ben Maurer  <bmaurer@ximian.com>
 
 	* mono.patch: update the patch for looking at the gc heap size.

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+	<mime-type type="application/x-mono-heap-prof">
+		<comment>Mono Heap Profile</comment>
+		<comment xml:lang="en">Mono Heap Profile</comment>
+		 <magic priority="40">
+			<match type="string" offset="0"
+			       value="\x68\x30\xa4\x57\x18\xec\xd6\xa1\x61\x9c\x1d\x43\xe1\x47\x27\xb6"/>
+			
+		 </magic>
+	</mime-type>
+</mime-info>

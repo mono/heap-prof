@@ -1,0 +1,5 @@
+2005-01-16  Ben Maurer  <bmaurer@ximian.com>
+
+	* Makefile.am, mono-heap-prof.xml: install mime data for the
+	profile dump.
+

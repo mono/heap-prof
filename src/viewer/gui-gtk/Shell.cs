@@ -84,6 +84,18 @@ class Shell : Window {
 			fd.AddButton (Gtk.Stock.Cancel, Gtk.ResponseType.Cancel);
 			fd.AddButton (Gtk.Stock.Open, Gtk.ResponseType.Ok);
 			
+			FileFilter filter_all = new FileFilter ();
+			filter_all.AddPattern ("*");
+			filter_all.Name = "All Files";
+			
+			FileFilter filter_prof = new FileFilter ();
+			filter_prof.AddMimeType ("application/x-mono-heap-prof");
+			filter_prof.Name = "Mono Heap Profiles";
+			
+			fd.AddFilter (filter_all);
+			fd.AddFilter (filter_prof);
+			fd.Filter = filter_prof;
+			
 			if (fd.Run () == (int) ResponseType.Ok)
 				s = fd.Filename;
 			

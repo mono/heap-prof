@@ -6,13 +6,38 @@ AC_PROG_LIBTOOL
 PKG_CHECK_MODULES(CCOMPILE, mono glib-2.0)
 PKG_CHECK_MODULES(GTKSHARP, gtk-sharp-2.0 gtk-dotnet-2.0)
 
+AC_PATH_PROG(UPDATE_MIME_DATABASE, update-mime-database, no)
+
+if test "x$UPDATE_MIME_DATABASE" = "xno" ; then
+enable_xdgmime="no"
+else
+enable_xdgmime="yes"
+fi
+
+AM_CONDITIONAL(ENABLE_XDGMIME, test "x$enable_xdgmime" = "xyes")
+
 AC_PATH_PROG(MCS, mcs)
 AC_PATH_PROG(MONO, mono)
 
 AC_OUTPUT([
 Makefile
+mime-data/Makefile
 src/Makefile
 src/runtime-profiler/Makefile
 src/viewer/Makefile
 src/viewer/mono-heap-prof-view
 ])
+
+echo "---"
+echo "Configuration summary"
+echo ""
+echo "   * Installation prefix = $prefix"
+echo "   * XDG Mime Data = $enable_xdgmime"
+echo ""
+echo "   NOTE: if any of the above say 'no' you may install the"
+echo "         corresponding development packages for them, and"
+echo "         rerun autogen.sh. If you are sure the proper"
+echo "         libraries are installed, use PKG_CONFIG_PATH to"
+echo "         point to their .pc files"
+echo ""
+echo "---"
