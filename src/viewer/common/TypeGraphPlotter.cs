@@ -40,7 +40,7 @@ class Plotter {
 		int del_t = end_t - start_t;
 		
 		data = new ArrayList ();
-		int size_threshold = Profile.MaxSize / ysize;
+		int size_threshold = (Profile.MaxSize / ysize) * 3;
 		
 		foreach (TimeData td in d.Data) {
 			if (td.HeapSize < size_threshold)
@@ -72,22 +72,25 @@ class Plotter {
 	
 	public void Draw (Graphics g)
 	{
+		Point [] poly = new Point [data.Count + 2];
 		
-		int [] offsets = new int [data.Count];
-		Point [] prev = new Point [data.Count];
+		for (int i = 0; i < poly.Length; i ++)
+			poly [i].Y = ysize;
 		
-		for (int i = 0; i < prev.Length; i ++)
-			prev [i].Y = ysize;
-		
-		prev [0].X = xsize;
+		poly [0] = new Point (0, 0);
+		poly [poly.Length - 1] = new Point (xsize, 0);
+		poly [poly.Length - 2] = new Point (xsize, ysize);
 		
 		for (int i = -1; i <  tl.TypeIndexes.Length; i ++) {
-			Point [] line = new Point [data.Count];
+			Brush b;
+			if (i == -1)
+				b = Brushes.DarkGray;
+			else
+				b = tl.TypeBrushes [i];
 			
-			int j = 0;
+			g.FillPolygon (b, poly);
+			int j = 1;
 			foreach (TimePoint tp in data) {
-				
-				
 				int psize;
 				
 				if (i == -1)
@@ -95,29 +98,13 @@ class Plotter {
 				else
 					psize = tp.TypeData [i];
 				
-				line [j].X = tp.X;
-				line [j].Y = ysize - checked (offsets [j] + (int)((long)psize * (long) ysize / (long)Profile.MaxSize));
-				offsets [j] = ysize - line [j].Y;
+				poly [j].X = tp.X;
+				poly [j].Y -= checked ((int)((long)psize * (long) ysize / (long)Profile.MaxSize));
 				j ++;
 			}
-			
-			GraphicsPath path = new GraphicsPath ();
-			path.AddLines (line);
-			path.AddLine (line [line.Length - 1], prev [0]);
-			path.AddLines (prev);
-			//path.CloseFigure ();
-			
-			Brush b;
-			if (i == -1)
-				b = Brushes.DarkGray;
-			else
-				b = tl.TypeBrushes [i];
-			
-			g.FillPath (b, path);
-			
-			prev = line;
-			Array.Reverse (prev, 0, prev.Length);
 		}
+		
+		g.FillPolygon (Brushes.White, poly);
 	
 		{
 			Point [] line = new Point [data.Count];
@@ -141,16 +128,71 @@ class Plotter {
 class RandomBrush {
 	int i;
 	
-	static Brush [] brushes = {
-		Brushes.IndianRed,
-		Brushes.BurlyWood,
-		Brushes.Chocolate,
-		Brushes.DarkGoldenrod,
-		Brushes.PaleGoldenrod,
-		Brushes.DarkOrange,
-		Brushes.DarkSalmon,
+	static Brush [] brushes;
+	
+	const int N_COLORS = 26;
+	const int MOD = 5;
+
+	static RandomBrush () {
 		
-	};
+		Color [] c = Generate (N_COLORS);
+		
+		brushes = new Brush [c.Length];
+		
+		for (int i = 0; i < c.Length; i ++)
+			brushes [i] = new SolidBrush (c [i]);
+	}
+	
+	static Color [] Generate (int range)
+	{
+		
+		float hue_step = 1.0f / range;
+		float hue_base = 0.0f;
+		
+		int mod_check;
+		
+		Color [] ret = new Color [range];
+		for (int i = 0; i < range; i ++) {
+			
+			float hue_offset, hue;
+			
+			hue = hue_step * ((MOD * i) % N_COLORS);
+			
+			
+			Console.WriteLine (hue);
+			ret [i] = HSV2RGB (hue, .60f, .80f);
+		}
+		
+		return ret;
+	}
+	
+	public static Color HSV2RGB (float H, float S, float V) {
+		if (S == 0.0)
+			return new Color ();
+		
+		H *= 6.0f;
+		int i = (int) Math.Floor (H);
+		float f = H - (float)i;
+		float p = V*(1.0f - S);
+		float q = V*(1.0f - S * f);
+		float t = V*(1.0f - (S* (1.0f - f)));
+		
+		
+		int i_v = (int) (V * 255.0f);
+		int i_p = (int) (p * 255.0f);
+		int i_q = (int) (q * 255.0f);
+		int i_t = (int) (t * 255.0f);
+		switch (i) {
+			case 0: return Color.FromArgb (i_v, i_t, i_p);
+			case 1: return Color.FromArgb (i_q, i_v, i_p);
+			case 2: return Color.FromArgb (i_p, i_v, i_t);
+			case 3: return Color.FromArgb (i_p, i_q, i_v);
+			case 4: return Color.FromArgb (i_t, i_p, i_v);
+			case 5: return Color.FromArgb (i_v, i_p, i_q);
+			default:
+				return new Color ();
+		}
+	}
 	
 	public Brush Next ()
 	{

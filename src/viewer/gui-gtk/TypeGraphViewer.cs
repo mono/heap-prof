@@ -185,10 +185,6 @@ class TypeListTreeNode : TreeNode {
 
 }
 
-
-//
-// A sample using inheritance to draw
-//
 class TypeGrpah : DrawingArea {
 	TypeList tl;
 	
@@ -199,6 +195,8 @@ class TypeGrpah : DrawingArea {
 	Plotter plot;
 	TypeGraphComponent parent;
 	
+	Gdk.Rectangle graph_area, x_scale, y_scale;
+	
 	public TypeGrpah (TypeList tl, TypeGraphComponent parent)
 	{
 		Events |= Gdk.EventMask.ButtonPressMask;
@@ -207,39 +205,98 @@ class TypeGrpah : DrawingArea {
 		this.parent = parent;
 		SetSizeRequest (700, 700);
 	}
-			       
+	
 	protected override bool OnExposeEvent (Gdk.EventExpose args)
 	{
 		
 		if (bitmap_cache == null) {
-			bitmap_cache = new Gdk.Pixmap (GdkWindow, allocation.Width, allocation.Height, -1);
+			bitmap_cache = new Gdk.Pixmap (GdkWindow, graph_area.Width, graph_area.Height, -1);
 			bitmap_cache.DrawRectangle (Style.WhiteGC, true, 0, 0,
-				allocation.Width, allocation.Height);
+				graph_area.Width, graph_area.Height);
 			
 			using (Graphics g = Gtk.DotNet.Graphics.FromDrawable (bitmap_cache)) {
-				plot = new Plotter (allocation.Width, allocation.Height, parent.CurrentTabulator, tl);
+				plot = new Plotter (graph_area.Width, graph_area.Height, parent.CurrentTabulator, tl);
 				plot.Draw (g);
 			}
 		}
-		
 		Gdk.Rectangle area = args.Area;
+		
 		GdkWindow.DrawDrawable (Style.BlackGC,
 						bitmap_cache,
-						area.X, area.Y,
-						area.X, area.Y,
-						area.Width, area.Height);
+						0, 0,
+						graph_area.X, graph_area.Y,
+						graph_area.Width, graph_area.Height);
+
+		DrawXScale (area);
 		
 		return true;
 	}
 	
+	string FormatTime (int ms)
+	{
+		TimeSpan dt = TimeSpan.FromMilliseconds (ms);
+		
+		double seconds = (double) (dt.Ticks % TimeSpan.TicksPerMinute) / (double) TimeSpan.TicksPerSecond;
+		
+		string format;
+		
+		if (dt.TotalDays > 1)
+			format = "{0}.{1}:{2}:{3}";
+		else if (dt.TotalHours > 1)
+			format = "{1}:{2}:{3}";
+		else if (dt.TotalMinutes > 1)
+			format = "{2}:{3}";
+		else
+			format = "{3}";
+		
+		return String.Format (format, dt.Days, dt.Hours, dt.Minutes, seconds);
+	}
+	
+	void DrawXScale (Gdk.Rectangle area)
+	{
+		const int tick_space = 15;
+		const int major_tick_freq = 5;
+		const int minor_tick_height = 5;
+		const int major_tick_height = 10;
+		
+		int t_0 = parent.StartTime;
+		int dt = ((parent.EndTime - parent.StartTime) / x_scale.Width) * tick_space;
+		
+		for (int i = 0; i < x_scale.Width / tick_space; i ++) {
+			if (i % major_tick_freq == 0) {
+				
+				Pango.Layout layout = this.CreatePangoLayout (FormatTime (t_0 + dt * i));
+				
+				int w, h;
+				
+				layout.GetPixelSize (out w, out h);
+				
+				GdkWindow.DrawLayout (Style.BlackGC,  x_scale.X + i * tick_space - w / 2,  x_scale.Y + major_tick_height, layout);			
+				GdkWindow.DrawLine (Style.BlackGC, x_scale.X + i * tick_space , x_scale.Y, x_scale.X + i * tick_space, x_scale.Y + major_tick_height);
+			} else {
+				GdkWindow.DrawLine (Style.BlackGC, x_scale.X + i * tick_space , x_scale.Y, x_scale.X + i * tick_space, x_scale.Y + minor_tick_height);
+			}
+		}
+	}
+	
 	protected override void OnSizeAllocated (Gdk.Rectangle allocation)
 	{
-		allocated = true;
+		
+		int x_scale_size = 30, y_scale_size = 10;
+		
+		y_scale = new Gdk.Rectangle (0, 0, y_scale_size, allocation.Height - x_scale_size);
+		x_scale = new Gdk.Rectangle (y_scale_size, allocation.Height - x_scale_size, allocation.Width - y_scale_size, x_scale_size);
+		graph_area = new Gdk.Rectangle (y_scale_size, 0, allocation.Width - y_scale_size, allocation.Height - x_scale_size);
+		
+		Console.WriteLine (allocation);
+		Console.WriteLine (x_scale);
+		
 		this.allocation = allocation;
+		
 		UpdateCache ();
 		base.OnSizeAllocated (allocation);
 	}
-
+	
 	public void UpdateCache ()
 	{
 		if (bitmap_cache != null)

@@ -1,3 +1,12 @@
+2005-02-19  Ben Maurer  <bmaurer@ximian.com>
+
+	* TypeGraphPlotter.cs:
+	    - A new color chooser. Somewhat exparimental. I still think it
+	      needs to get better
+	    - Make anti-alias work nicely, by drawing rectangles from the
+	      bottom of the band to the top of the screen. This prevents
+	      little white lines. 
+
 2005-02-06  Ben Maurer  <bmaurer@ximian.com>
 
 	* Profile.cs (MaxSize): new prop.
