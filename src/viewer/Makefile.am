@@ -7,7 +7,8 @@ common_sources = \
 	$(srcdir)/common/TypeTabulator.cs \
 	$(srcdir)/common/ProfileReader.cs \
 	$(srcdir)/common/BacktraceTabulator.cs \
-	$(srcdir)/common/TypeGraphPlotter.cs
+	$(srcdir)/common/TypeGraphPlotter.cs \
+	$(srcdir)/common/Profile.cs
 
 gtk_sources = \
 	$(srcdir)/gui-gtk/TypeGraphViewer.cs \

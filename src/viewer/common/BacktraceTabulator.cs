@@ -82,15 +82,15 @@ class AllocNode : IComparable {
 
 class BacktraceTabulator {
 	public Hashtable nodes;
-	public TypeTabulator t;
+	public Profile p;
 		
 	public ArrayList type_nodes;
 	
 	public int total_size;
 		
-	public BacktraceTabulator (TypeTabulator t, int [] context_data)
+	public BacktraceTabulator (Profile p, int [] context_data)
 	{
-		this.t = t;
+		this.p = p;
 		nodes = new Hashtable ();
 		type_nodes = new ArrayList ();
 		
@@ -99,8 +99,8 @@ class BacktraceTabulator {
 			if (context_data [i] == 0)
 				continue;
 			
-			Context c = t.GetContext (i);
-			int [] bt = t.GetBacktrace (c.Backtrace);
+			Context c = p.GetContext (i);
+			int [] bt = p.GetBacktrace (c.Backtrace);
 			LookupNode (c.Type, bt, bt.Length).RecordAlloc (context_data [i], context_data [i] * c.Size);
 			
 			total_size += total_size;
@@ -139,10 +139,10 @@ class BacktraceTabulator {
 	{
 		foreach (AllocNode an in type_nodes) {
 			
-			if (an.n_bytes <  total_size * .15)
+			if (an.n_bytes < total_size * .15)
 				continue;
 			
-			Console.WriteLine ("{0} -- {1} bytes, {2} objects", t.GetTypeName (an.type), an.n_bytes, an.n_allocs);
+			Console.WriteLine ("{0} -- {1} bytes, {2} objects", p.GetTypeName (an.type), an.n_bytes, an.n_allocs);
 			
 			WriteAllocSitesRecursive (an.Children, "\t");
 		}
@@ -156,28 +156,8 @@ class BacktraceTabulator {
 		foreach (AllocNode an in ar) {
 			
 			
-			Console.WriteLine (pre + "{0} -- {1} bytes, {2} objects", t.GetMethodName (an.bt [an.bt_len - 1]), an.n_bytes, an.n_allocs);
+			Console.WriteLine (pre + "{0} -- {1} bytes, {2} objects", p.GetMethodName (an.bt [an.bt_len - 1]), an.n_bytes, an.n_allocs);
 			WriteAllocSitesRecursive (an.Children, pre + "\t");
 		}
 	}
-	
-	/*
-	static void Main (string [] args)
-	{
-		TypeTabulator t = new TypeTabulator (args [0]);
-		t.Read ();
-		t.Process ();
-		
-		
-		foreach (TimeData d in t.Data) {
-
-			if (d.TotalSize == 0)
-				continue;
-			
-			Console.WriteLine ("Heap at {0} ms", d.Time);
-			Console.WriteLine ("Total heap size {0}", d.TotalSize);
-			
-			new BacktraceTabulator (t, d.ContextData).Dump ();
-		}
-	}*/
 }

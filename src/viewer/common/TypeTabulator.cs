@@ -27,7 +27,8 @@ class TypeTabulator : ProfileReader {
 	int last_time;
 	int cur_heap_size;
 	
-	public TypeTabulator (string basename) : base (basename) {
+	public TypeTabulator (Profile p) : base (p)
+	{
 		Data = new ArrayList ();
 		current_type_data = new int [TypeTableSize];
 		current_context_data = new int [ContextTableSize];

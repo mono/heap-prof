@@ -4,7 +4,7 @@ using Gtk;
 
 class BacktraceViewerComponent : ShellComponent {
 	TimeData data;
-	TypeTabulator t;
+	Profile p;
 	BacktraceTabulator bt;
 	
 	BacktraceNodeStore ns;
@@ -14,12 +14,12 @@ class BacktraceViewerComponent : ShellComponent {
 	
 	
 	
-	public BacktraceViewerComponent (TimeData data, TypeTabulator t)
+	public BacktraceViewerComponent (TimeData data, Profile p)
 	{
 		
 		this.data = data;
-		this.t = t;
-		this.bt = new BacktraceTabulator (t, data.ContextData);
+		this.p = p;
+		this.bt = new BacktraceTabulator (p, data.ContextData);
 		
 		Title = string.Format ("Heap at {0} ms", data.Time);
 		
@@ -30,7 +30,7 @@ class BacktraceViewerComponent : ShellComponent {
 		
 		box.PackStart (CreateHeader (), false, false, 0);
 		
-		ns = new BacktraceNodeStore (data, t, bt);
+		ns = new BacktraceNodeStore (data, p, bt);
 		
 		ScrolledWindow sw = new ScrolledWindow ();
 		sw.Add (ns.GetNodeView ());
@@ -72,17 +72,17 @@ class BacktraceViewerComponent : ShellComponent {
 
 class BacktraceNodeStore : NodeStore {
 	TimeData data;
-	TypeTabulator t;
+	Profile p;
 	BacktraceTabulator bt;
 	
-	public BacktraceNodeStore (TimeData data, TypeTabulator t, BacktraceTabulator bt) : base (typeof (BacktraceNode))
+	public BacktraceNodeStore (TimeData data, Profile p, BacktraceTabulator bt) : base (typeof (BacktraceNode))
 	{
 		this.data = data;
-		this.t = t;
+		this.p = p;
 		this.bt = bt;
 		
 		foreach (AllocNode an in bt.type_nodes) {
-			BacktraceNode n = new BacktraceNode (data, t, an);
+			BacktraceNode n = new BacktraceNode (data, p, an);
 			ProcessNode (n);
 			AddNode (n);
 		}
@@ -90,13 +90,13 @@ class BacktraceNodeStore : NodeStore {
 	
 	void ProcessNode (BacktraceNode n)
 	{
-		AllocNode p = n.an;
+		AllocNode node = n.an;
 		
-		if (p.Children == null)
+		if (node.Children == null)
 			return;
 		
-		foreach (AllocNode an in p.Children) {
-			BacktraceNode nn = new BacktraceNode (data, t, an);
+		foreach (AllocNode an in node.Children) {
+			BacktraceNode nn = new BacktraceNode (data, p, an);
 			ProcessNode (nn);
 			n.AddChild (nn);
 		}
@@ -147,13 +147,13 @@ class BacktraceNodeStore : NodeStore {
 [TreeNode (ColumnCount = 1)]
 class BacktraceNode : TreeNode {
 	public TimeData data;
-	TypeTabulator t;
+	Profile p;
 	public AllocNode an;
 
-	public BacktraceNode (TimeData data, TypeTabulator t, AllocNode an)
+	public BacktraceNode (TimeData data, Profile p, AllocNode an)
 	{
 		this.data = data;
-		this.t = t;
+		this.p = p;
 		this.an = an;
 	}
 	
@@ -161,9 +161,9 @@ class BacktraceNode : TreeNode {
 	public string Name {
 		get {
 			if (an.bt_len == 0)
-				return t.GetTypeName (an.type);
+				return p.GetTypeName (an.type);
 			else
-				return t.GetMethodName (an.bt [an.bt_len - 1]);
+				return p.GetMethodName (an.bt [an.bt_len - 1]);
 		}
 	}
 }

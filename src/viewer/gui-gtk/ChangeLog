@@ -1,5 +1,8 @@
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
+	* Shell.cs, TypeGraphViewer.cs, BacktraceViewer.cs: A bit of
+	refactoring.
+	
 	* Shell.cs (OnOpen): Add filter for heap prof files
 
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>

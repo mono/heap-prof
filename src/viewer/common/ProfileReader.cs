@@ -1,24 +1,19 @@
 using System;
 using System.IO;
 
-
-
 public abstract class ProfileReader {
 	
-	Metadata mr;
+	public Profile Profile;
 	BinaryReader br;
-	string name;
 	
-	public ProfileReader (string name)
+	public ProfileReader (Profile p)
 	{
-		this.name = name;
-		mr = new Metadata (name);
-		//mr.Dump ();
+		Profile = p;
 	}
 	
 	public void Read ()
 	{
-		using (br = new BinaryReader (File.OpenRead (name))) {
+		using (br = new BinaryReader (File.OpenRead (Profile.Filename))) {
 			ProfilerSignature.ReadHeader (br, true);
 			
 			while (true) {
@@ -71,31 +66,34 @@ public abstract class ProfileReader {
 	{
 	}
 	
+	
 	public string GetTypeName (int idx)
 	{
-		return mr.GetTypeName (idx);
+		return Profile.GetTypeName (idx);
 	}
 	
 	public string GetMethodName (int idx)
 	{
-		return mr.GetMethodName (idx);
+		return Profile.GetMethodName (idx);
 	}
 	
 	public int [] GetBacktrace (int idx)
 	{
-		return mr.GetBacktrace (idx);
+		return Profile.GetBacktrace (idx);
 	}
 	
 	public Context GetContext (int idx)
 	{
-		return mr.GetContext (idx);
+		return Profile.GetContext (idx);
 	}
 	
+	public int TypeTableSize {
+		get { return Profile.TypeTableSize; }
+	}
 	
-	public int TypeTableSize { get { return mr.TypeTableSize; } }
-	public int ContextTableSize { get { return mr.ContextTableSize; } }
-
-	
+	public int ContextTableSize {
+		get { return Profile.ContextTableSize; }
+	}
 }
 
 public class Metadata {
@@ -132,9 +130,9 @@ public class Metadata {
 	}
 	
 	
-	public Metadata (string name)
+	public Metadata (Profile p)
 	{
-		using (BinaryReader br = new BinaryReader (File.OpenRead (name))) {
+		using (BinaryReader br = new BinaryReader (File.OpenRead (p.Filename))) {
 			
 			br.BaseStream.Seek (-8, SeekOrigin.End);
 			br.BaseStream.Seek (br.ReadInt64 (), SeekOrigin.Begin);

@@ -1,3 +1,9 @@
+2005-01-16  Ben Maurer  <bmaurer@ximian.com>
+
+	* *.cs: Factor Profile out.
+	
+	* Profile.cs: New file.
+
 2005-01-15  Ben Maurer  <bmaurer@ximian.com>
 
 	* ProfileReader.cs: Update for new file format. Read HeapSize

@@ -12,8 +12,13 @@ class TypeGraphComponent : ShellComponent {
 	TypeList tl;
 	HPaned paned;
 	
-	public TypeGraphComponent (TypeTabulator t)
+	public TypeGraphComponent (Profile p)
 	{
+		
+		t = new TypeTabulator (p);
+		t.Read ();
+		t.Process ();
+		
 		Title = "Type Graph";
 		
 		this.t = t;
@@ -224,7 +229,7 @@ class PrettyGraphic : DrawingArea {
 			if (tp.X >= e.X) {
 				Console.WriteLine ("Found {0}", tp.Time);
 				
-				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, t));
+				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, t.Profile));
 				
 				break;
 			}

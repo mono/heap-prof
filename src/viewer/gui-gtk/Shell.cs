@@ -65,15 +65,10 @@ class Shell : Window {
 
 	public void Open (string fn)
 	{
-		int b = Environment.TickCount;
-		TypeTabulator t = new TypeTabulator (fn);
-		t.Read ();
-		t.Process ();
-		//t.Dump ();
-		
-		Console.WriteLine (Environment.TickCount - b);
+		Profile p = new Profile (fn);
+		p.ReadMetadata ();
 
-		Add (new TypeGraphComponent (t));
+		Add (new TypeGraphComponent (p));
 	}
 	
 	void OnOpen (object obj, EventArgs args)
