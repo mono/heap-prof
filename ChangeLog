@@ -1,3 +1,7 @@
+2005-01-15  Ben Maurer  <bmaurer@ximian.com>
+
+	* mono.patch: update the patch for looking at the gc heap size.
+
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>
 
 	* configure.in: Check for gtk-dotnet-2.0

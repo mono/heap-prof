@@ -70,7 +70,7 @@ static const guint8 heap_prof_md_sig [] = {
 	0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 };
 
-static const guint32 heap_prof_version = 2;
+static const guint32 heap_prof_version = 3;
 
 #define BT_SIZE 5
 
@@ -92,7 +92,10 @@ typedef struct {
 	HeapProfGcFreedRec freed [MONO_ZERO_LEN_ARRAY];
 } HeapProfGCRec;
 
-
+typedef struct {
+	guint32 time;
+	guint32 new_size; /* high bit is set */
+} HeapProfGCHeapResize;
 
 static guint32
 get_delta_t (MonoProfiler *p)
@@ -299,6 +302,21 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 }
 
 static void
+prof_heap_resize (MonoProfiler *p, int new_size)
+{
+	HeapProfGCHeapResize rec;
+
+	hp_lock_enter ();
+	
+	rec.time = leu32 (get_delta_t (p) | (1 << 31));
+	rec.new_size = leu32 (new_size | (1 << 31));
+	
+	prof_write (p, &rec, sizeof (rec));
+	
+	hp_lock_leave ();
+}
+
+static void
 write_enc_int (MonoProfiler*p, int v)
 {
 	do {
@@ -484,7 +502,7 @@ mono_profiler_startup (const char *desc)
 	write_header (p);
 	
 	mono_profiler_install_allocation (write_allocation);
-	mono_profiler_install_gc (prof_marks_set);
+	mono_profiler_install_gc (prof_marks_set, prof_heap_resize);
 	mono_profiler_set_events (MONO_PROFILE_ALLOCATIONS | MONO_PROFILE_GC);
 	
 	mono_profiler_install (p, mono_heap_prof_shutdown);

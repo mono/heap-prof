@@ -8,6 +8,7 @@ class TimeData {
 	public int [] ContextData;
 	public int OtherSize;
 	public int TotalSize;
+	public int HeapSize;
 }
 
 class TypeTabulator : ProfileReader {
@@ -24,6 +25,7 @@ class TypeTabulator : ProfileReader {
 	int [] current_type_data;
 	int [] current_context_data;
 	int last_time;
+	int cur_heap_size;
 	
 	public TypeTabulator (string basename) : base (basename) {
 		Data = new ArrayList ();
@@ -37,11 +39,12 @@ class TypeTabulator : ProfileReader {
 		td.Time = time - 1;
 		td.TypeData = (int []) current_type_data.Clone ();
 		td.ContextData = (int []) current_context_data.Clone ();
+		td.HeapSize = cur_heap_size;
 		
 		foreach (int i in td.TypeData)
 			td.TotalSize += i;
 		
-		MaxSize = Math.Max (td.TotalSize, MaxSize);
+		MaxSize = Math.Max (td.HeapSize, MaxSize);
 		
 		Data.Add (td);
 	}
@@ -58,7 +61,7 @@ class TypeTabulator : ProfileReader {
 	
 	protected override void AllocationSeen (int time, Context ctx, long pos)
 	{
-		SplitIfNeeded (time);
+		//SplitIfNeeded (time);
 		
 		current_type_data [ctx.Type] += ctx.Size;
 		current_context_data [ctx.Id] ++;
@@ -69,6 +72,16 @@ class TypeTabulator : ProfileReader {
 		// Splitting twice here gives nice graphs, since you get a strait line
 		Split (time);
 		ReadGcFreed ();
+		Split (time);
+		
+		last_time = time;
+	}
+	
+	protected override void GcHeapResize (int time, int new_size)
+	{
+		// Splitting twice here gives nice graphs, since you get a strait line
+		Split (time);
+		cur_heap_size = new_size;
 		Split (time);
 		
 		last_time = time;

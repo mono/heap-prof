@@ -9,6 +9,7 @@ class TimePoint {
 	public int OtherSize;
 	public int [] TypeData;
 	public TimeData Data;
+	public int HeapSize;
 }
 
 class Plotter {
@@ -38,7 +39,7 @@ class Plotter {
 		int size_threshold = d.MaxSize / ysize;
 		
 		foreach (TimeData td in d.Data) {
-			if (td.TotalSize < size_threshold)
+			if (td.HeapSize < size_threshold)
 				continue;
 			
 			TimePoint p = new TimePoint ();
@@ -50,6 +51,7 @@ class Plotter {
 			p.X = td.Time * xsize / end_t;
 			p.OtherSize = td.OtherSize;
 			p.TypeData = new int [tl.TypeIndexes.Length];
+			p.HeapSize = td.HeapSize;
 			
 			for (int i = 0; i < tl.TypeIndexes.Length; i ++) {
 				int ty = tl.TypeIndexes [i];
@@ -112,7 +114,24 @@ class Plotter {
 			prev = line;
 			Array.Reverse (prev, 0, prev.Length);
 		}
+	
+		{
+			Point [] line = new Point [data.Count];
+			
+			int j = 0;
+			foreach (TimePoint tp in data) {
+				
+				
+				int psize = tp.HeapSize;
+				line [j].X = tp.X;
+				line [j].Y = ysize - checked ((int)((long)psize * (long) ysize / (long)d.MaxSize));
+				j ++;
+			}
+			
+			g.DrawLines (Pens.Black, line);
+		}
 	}
+
 }
 
 class RandomBrush {

@@ -37,9 +37,12 @@ public abstract class ProfileReader {
 				} else {
 					time &= int.MaxValue;
 					
-					int gc_num = br.ReadInt32 ();
+					int data = br.ReadInt32 ();
 					
-					GcSeen (time, gc_num);
+					if ((data & (int)(1 << 31)) == 0)
+						GcSeen (time, data);
+					else
+						GcHeapResize (time, (data & int.MaxValue));
 				}
 					
 			}
@@ -63,6 +66,10 @@ public abstract class ProfileReader {
 	protected abstract void AllocationSeen (int time, Context ctx, long pos);
 	protected abstract void GcSeen (int time, int gc_num);
 	protected abstract void GcFreedSeen (int time, Context ctx, long pos);
+		
+	protected virtual void GcHeapResize (int time, int new_size)
+	{
+	}
 	
 	public string GetTypeName (int idx)
 	{
@@ -211,7 +218,7 @@ class ProfilerSignature {
 		0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 	};
 	
-	const int Version = 2;
+	const int Version = 3;
 	
 	public static void ReadHeader (BinaryReader br, bool is_dump)
 	{

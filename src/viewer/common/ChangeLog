@@ -1,3 +1,12 @@
+2005-01-15  Ben Maurer  <bmaurer@ximian.com>
+
+	* ProfileReader.cs: Update for new file format. Read HeapSize
+	stuff.
+
+	* TypeTabulator.cs: Add HeapSize type stuff.
+
+	* TypeGraphPlotter.cs: Plot the total heap size.
+
 2005-01-09  Ben Maurer  <bmaurer@ximian.com>
 
 	* *: Initial Import.
