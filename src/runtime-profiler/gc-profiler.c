@@ -12,6 +12,7 @@
 #include <mono/metadata/debug-helpers.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/profiler.h>
+#include <unistd.h>
 
 #define leu32 GUINT32_TO_LE
 #define lnatu32 GUINT32_FROM_LE
@@ -610,6 +611,27 @@ bt_eq (const Backtrace* a, const Backtrace* b)
 }
 
 void
+do_default_file_name (MonoProfiler* p)
+{
+	int pid = getpid ();
+	int i = 0;
+	
+	while (TRUE) {
+		if (i == 0)
+			p->file = g_strdup_printf ("mono-heap-prof.%d", pid);
+		else
+			p->file = g_strdup_printf ("mono-heap-prof.%d.%d", pid, i);
+		
+		p->out = fopen (p->file, "w+x");
+		
+		if (p->out)
+			break;
+		
+		g_free (p->file);
+	}
+}
+
+void
 mono_profiler_startup (const char *desc)
 {
 	MonoProfiler* p = g_new0 (MonoProfiler, 1);
@@ -619,9 +641,11 @@ mono_profiler_startup (const char *desc)
 	g_assert (! strncmp (desc, "heap", 4));
 	
 	if (strncmp (desc, "heap:", 5))
-		g_error ("You need to specify an output file for the heap profiler with --profile=heap:outfile");
-	
-	p->file = strdup (desc + 5);
+		do_default_file_name (p);
+	else {
+		p->file = strdup (desc + 5);
+		p->out = fopen (p->file, "w+");
+	}
 	
 	p->klass_to_table_idx  = g_hash_table_new (NULL, NULL);
 	p->method_to_table_idx = g_hash_table_new (NULL, NULL);
@@ -635,7 +659,7 @@ mono_profiler_startup (const char *desc)
 	p->timeline     = g_ptr_array_new ();
 	
 	
-	p->out = fopen (p->file, "w+");
+	
 	p->t_zero = GetTickCount ();
 	
 	write_header (p);

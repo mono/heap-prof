@@ -1,3 +1,11 @@
+2005-01-21  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c (do_default_file_name): Create the default file
+	name from the pid.
+	(mono_profiler_startup): Use the above.
+
+	Thanks to Miguel for the great idea.
+
 2005-01-20  Ben Maurer  <bmaurer@ximian.com>
 
 	* gc-profiler.c (prof_marks_set): Fix typo
