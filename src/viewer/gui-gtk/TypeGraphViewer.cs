@@ -123,7 +123,7 @@ class ColorCellRenderer : CellRenderer {
 	}
 }
 
-[TreeNode (ColumnCount = 2)]
+[TreeNode (ColumnCount = 2, ListOnly = true)]
 class TypeListTreeNode : TreeNode {
 
 	TypeList tl;
