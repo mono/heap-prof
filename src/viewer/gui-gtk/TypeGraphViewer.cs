@@ -42,8 +42,8 @@ class X {
 		ScrolledWindow sw = new ScrolledWindow ();
 		sw.Add (new TypeListNodeStore (tl).GetNodeView ());
 		
-		paned.Add1 (d);
-		paned.Add2 (sw);
+		paned.Pack1 (d, true, true);
+		paned.Pack2 (sw, false, true);
 
 
 		w.Add (paned);
@@ -76,6 +76,7 @@ class TypeListNodeStore : NodeStore {
 	{
 		r = new ColorCellRenderer ();
 		NodeView nv = new NodeView (this);
+		nv.SetSizeRequest (250, 700);
 		nv.HeadersVisible = false;
 		nv.AppendColumn ("Color",r, new NodeCellDataFunc (GetColorData));
 		nv.AppendColumn ("Type",  new CellRendererText (),  "text", 1);
@@ -190,7 +191,7 @@ class PrettyGraphic : DrawingArea {
 		
 		this.t = t;
 		this.tl = tl;
-		SetSizeRequest (500, 500);
+		SetSizeRequest (700, 700);
 	}
 			       
 	protected override bool OnExposeEvent (Gdk.EventExpose args)
