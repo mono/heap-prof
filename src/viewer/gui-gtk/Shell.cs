@@ -19,8 +19,9 @@ class Shell : Window {
 		Shell s;
 		Application.Init ();
 		s = new Shell ();
-		s.ShowAll ();
+		
 		s.Open (args [0]);
+		s.ShowAll ();
 		Application.Run ();
 	}
 	
