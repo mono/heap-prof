@@ -1,1 +1,1 @@
-SUBDIRS= viewer runtime-profiler
+SUBDIRS= viewer runtime-profiler memstat

@@ -1,6 +1,6 @@
 Index: libgc/include/gc.h
 ===================================================================
---- libgc/include/gc.h	(revision 38648)
+--- libgc/include/gc.h	(revision 39325)
 +++ libgc/include/gc.h	(working copy)
 @@ -91,7 +91,22 @@
  			/* If it returns, it must return 0 or a valid	*/
@@ -27,7 +27,7 @@ Index: libgc/include/gc.h
  			/* report inaccessible memory that was not	*/
 Index: libgc/include/private/gc_priv.h
 ===================================================================
---- libgc/include/private/gc_priv.h	(revision 38648)
+--- libgc/include/private/gc_priv.h	(revision 39325)
 +++ libgc/include/private/gc_priv.h	(working copy)
 @@ -1781,10 +1781,7 @@
  			
@@ -43,7 +43,7 @@ Index: libgc/include/private/gc_priv.h
  void GC_read_changed GC_PROTO((void));	/* Analogous to GC_read_dirty */
 Index: libgc/alloc.c
 ===================================================================
---- libgc/alloc.c	(revision 38648)
+--- libgc/alloc.c	(revision 39325)
 +++ libgc/alloc.c	(working copy)
 @@ -617,6 +617,9 @@
     }
@@ -79,7 +79,7 @@ Index: libgc/alloc.c
  
 Index: mono/metadata/profiler.c
 ===================================================================
---- mono/metadata/profiler.c	(revision 38648)
+--- mono/metadata/profiler.c	(revision 39325)
 +++ mono/metadata/profiler.c	(working copy)
 @@ -12,6 +12,7 @@
  #ifdef HAVE_BACKTRACE_SYMBOLS
@@ -138,7 +138,7 @@ Index: mono/metadata/profiler.c
  void 
  mono_profiler_assembly_event  (MonoAssembly *assembly, int code)
  {
-@@ -357,6 +384,12 @@
+@@ -357,6 +384,22 @@
  		shutdown_callback (current_profiler);
  }
  
@@ -148,12 +148,22 @@ Index: mono/metadata/profiler.c
 +	return GC_is_marked (o);
 +}
 +
++void
++mono_profiler_gc_get_heap_stats (int* arena_size, int* live_bytes)
++{
++	if (arena_size)
++		*arena_size = GC_get_heap_size ();
++	
++	if (live_bytes)
++		*live_bytes = GC_get_heap_size () - GC_get_free_bytes ();
++}
++
  static GHashTable *coverage_hash = NULL;
  
  MonoProfileCoverageInfo* 
 Index: mono/metadata/profiler.h
 ===================================================================
---- mono/metadata/profiler.h	(revision 38648)
+--- mono/metadata/profiler.h	(revision 39325)
 +++ mono/metadata/profiler.h	(working copy)
 @@ -64,6 +64,8 @@
  typedef void (*MonoProfileThreadFunc)     (MonoProfiler *prof, guint32 tid);
@@ -164,11 +174,18 @@ Index: mono/metadata/profiler.h
  
  typedef gboolean (*MonoProfileCoverageFilterFunc)   (MonoProfiler *prof, MonoMethod *method);
  
-@@ -94,6 +96,7 @@
+@@ -94,8 +96,14 @@
  void mono_profiler_install_statistical (MonoProfileStatFunc callback);
  void mono_profiler_install_coverage_filter (MonoProfileCoverageFilterFunc callback);
  void mono_profiler_coverage_get  (MonoProfiler *prof, MonoMethod *method, MonoProfileCoverageFunc func);
 +void mono_profiler_install_gc (MonoProfileGCFunc callback, MonoProfileGCHeapResizeFunc hf);
  
  void mono_profiler_load             (const char *desc);
+ 
++/* data gathering */
++
++gboolean mono_profiler_mark_set (MonoObject* o);
++void mono_profiler_gc_get_heap_stats (int* arena_size, int* live_bytes);
++
+ #endif /* __MONO_PROFILER_H__ */
  

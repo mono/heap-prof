@@ -1,3 +1,9 @@
+2005-01-21  Ben Maurer  <bmaurer@ximian.com>
+
+	* mono.patch: update.
+	
+	* configure.in: Add stuff in AC_OUTPUT.
+
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
 	* configure.in: Add some checks for mime type crap
