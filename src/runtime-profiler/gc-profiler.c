@@ -160,7 +160,7 @@ get_type_idx (MonoProfiler *p, MonoClass* klass)
 		g_hash_table_insert (p->klass_to_table_idx, klass, idx_plus_one);
 	}
 	
-	return idx_plus_one - 1;
+	return leu32 (idx_plus_one - 1);
 }
 
 
@@ -177,6 +177,8 @@ get_bt_idx (MonoProfiler *p, Backtrace* bt)
 				break;
 			ibt->methods [ibt->len] = get_method_idx (p, bt->methods [ibt->len]);
 		}
+		
+		ibt->len = leu32 (ibt->len);
 			
 		g_ptr_array_add (p->bt_table, ibt);
 		idx_plus_one = p->bt_table->len;
@@ -184,7 +186,7 @@ get_bt_idx (MonoProfiler *p, Backtrace* bt)
 		g_hash_table_insert (p->bt_to_table_idx, g_memdup (bt, sizeof (*bt)), idx_plus_one);
 	}
 	
-	return idx_plus_one - 1;
+	return leu32 (idx_plus_one - 1);
 }
 
 
@@ -198,7 +200,7 @@ get_ctx_idx (MonoProfiler *p, AllocationCtx* ctx)
 		IdxAllocationCtx* ictx = g_new0 (IdxAllocationCtx, 1);
 		
 		ictx->klass = get_type_idx (p, ctx->klass);
-		ictx->size = ctx->size;
+		ictx->size = leu32 (ctx->size);
 		ictx->bt = get_bt_idx (p, &ctx->bt);
 			
 		g_ptr_array_add (p->ctx_table, ictx);
@@ -207,7 +209,7 @@ get_ctx_idx (MonoProfiler *p, AllocationCtx* ctx)
 		g_hash_table_insert (p->ctx_to_table_idx, g_memdup (ctx, sizeof (*ctx)), idx_plus_one);
 	}
 	
-	return idx_plus_one - 1;
+	return leu32 (idx_plus_one - 1);
 }
 
 typedef struct {
@@ -245,7 +247,7 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	hp_lock_enter ();
 
 	rec.time = leu32  (get_delta_t (p));
-	rec.alloc_ctx = leu32  (get_ctx_idx (p, &c));
+	rec.alloc_ctx = get_ctx_idx (p, &c);
 
 	offset = prof_write (p, &rec, sizeof (rec));
 	

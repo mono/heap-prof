@@ -1,3 +1,7 @@
+2005-01-12  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c: Fixes for endian crap.
+
 2005-01-12  Geoff Norton  <gnorton@customerdna.com>
 
         * gc-profiler.c:  Rename write to prof_write to avoid name clash on 
