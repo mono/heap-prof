@@ -12,6 +12,7 @@
 #include <mono/metadata/debug-helpers.h>
 #include <mono/metadata/object.h>
 #include <mono/metadata/profiler.h>
+#include <mono/metadata/mono-gc.h>
 #include <unistd.h>
 
 #define leu32 GUINT32_TO_LE
@@ -393,8 +394,10 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	hp_lock_leave ();
 }
 
+extern gboolean mono_object_is_alive (MonoObject* o);
+
 static void
-prof_gc_collection (MonoProfiler *p, MonoGcEvent e, int gen)
+prof_gc_collection (MonoProfiler *p, MonoGCEvent e, int gen)
 {
 	HeapProfGCRec rec;
 	HeapProfTimelineRec* trec;
