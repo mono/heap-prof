@@ -121,6 +121,24 @@ class Plotter {
 			
 			g.DrawLines (Pens.Black, line);
 		}
+
+#if DEBUG_GRAPH_SIZE
+		{
+			Point [] line = new Point [data.Count];
+			
+			int j = 0;
+			foreach (TimePoint tp in data) {
+				
+				
+				int psize = tp.Data.TotalSize;
+				line [j].X = tp.X;
+				line [j].Y = ysize - checked ((int)((long)psize * (long) ysize / (long)Profile.MaxSize));
+				j ++;
+			}
+			
+			g.DrawLines (Pens.Black, line);
+		}
+#endif
 	}
 
 }
@@ -210,10 +228,10 @@ class TypeList {
 	{
 		int num = 0;
 		
-		long threshold = p.MaxSize / 100;
+		int cutoff = (int) (p.MaxSize * TypeTabulator.Threshold);
 		
 		foreach (long l in p.Metadata.TypeMax)
-			if (l > threshold)
+			if (l >= cutoff)
 				num ++;
 			
 		Sizes = new long [num];
@@ -223,7 +241,7 @@ class TypeList {
 			
 		num = 0;
 		for (int i = 0; i < p.Metadata.TypeMax.Length; i ++) {
-			if (p.Metadata.TypeMax [i] > threshold) {
+			if (p.Metadata.TypeMax [i] >= cutoff) {
 				Sizes [num] = p.Metadata.TypeMax [i];
 				TypeIndexes [num] = i;
 				num ++;

@@ -13,10 +13,9 @@ class TimeData {
 class TypeTabulator : ProfileReader {
 	
 	const int DeltaT = 50;
-	const double Threshold = .005;
+	public const double Threshold = .01;
 
 	public ArrayList Data = new ArrayList ();
-	public long [] TotalTypeSizes;
 	public bool [] IsSizeLongEnough;
 	
 	int [] current_type_data;
@@ -113,8 +112,9 @@ class TypeTabulator : ProfileReader {
 	
 	public void Dump ()
 	{
-		long [] sizes = (long []) TotalTypeSizes.Clone ();
+		long [] sizes = (long []) Profile.Metadata.TypeMax.Clone ();
 		int [] indexes = new int [sizes.Length];
+		int cutoff = (int) (Profile.MaxSize * Threshold);
 		
 		for (int i = 0; i < indexes.Length; i ++)
 			indexes [i] = i;
@@ -134,7 +134,7 @@ class TypeTabulator : ProfileReader {
 			Console.WriteLine ("Total heap size {0}", d.TotalSize);
 			
 			foreach (int ty in indexes) {
-				if (!IsSizeLongEnough [ty])
+				if (Profile.Metadata.TypeMax [ty] < cutoff)
 					continue;
 				
 				Console.WriteLine ("{0} ({2:p}) -- {1}", d.TypeData [ty], GetTypeName (ty), (double) d.TypeData [ty] / (double) d.TotalSize);
@@ -150,21 +150,9 @@ class TypeTabulator : ProfileReader {
 		Split (end_t);
 		int cutoff = (int) (Profile.MaxSize * Threshold);
 		
-		TotalTypeSizes = new long [TypeTableSize];
-		IsSizeLongEnough = new bool [TypeTableSize];
-		
 		foreach (TimeData d in Data) {
 			for (int i = 0; i < d.TypeData.Length; i ++) {
-				TotalTypeSizes [i] += d.TypeData [i];
-				
-				if (d.TypeData [i] > cutoff)
-					IsSizeLongEnough [i] = true;
-			}
-		}
-		
-		foreach (TimeData d in Data) {
-			for (int i = 0; i < d.TypeData.Length; i ++) {
-				if (! IsSizeLongEnough [i]) {
+				if (Profile.Metadata.TypeMax [i] < cutoff) {
 					d.OtherSize += d.TypeData [i];
 					d.TypeData [i] = 0;
 				}
