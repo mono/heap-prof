@@ -15,21 +15,45 @@ class TypeTabulator : ProfileReader {
 	const int DeltaT = 50;
 	const double Threshold = .005;
 
-	
-	public ArrayList Data;
-	public int MaxSize;
+	public ArrayList Data = new ArrayList ();
 	public long [] TotalTypeSizes;
 	public bool [] IsSizeLongEnough;
 	
 	int [] current_type_data;
-	int [] current_context_data;
 	int last_time;
 	int cur_heap_size;
+	int start_t, end_t;
 	
 	public TypeTabulator (Profile p) : base (p)
 	{
-		Data = new ArrayList ();
 		current_type_data = new int [TypeTableSize];
+	}
+	
+	public TypeTabulator (Profile p, int start_t, int end_t) : base (p, start_t, end_t)
+	{
+		this.start_t = start_t;
+		this.end_t = end_t;
+		if (p.Metadata.GetTimelineBefore (EventType.Checkpoint, start_t) == -1)
+			current_type_data = new int [TypeTableSize];
+	}
+
+	protected override void Checkpoint (int time, int event_num)
+	{
+		if (current_type_data != null) {
+			base.Checkpoint (time, event_num);
+			return;
+		}
+		
+		int [] dummy;
+		
+		int last_resize = Profile.Metadata.GetTimelineBefore (EventType.HeapResize, time);
+		
+		if (last_resize != -1) {
+			cur_heap_size = Profile.Metadata.GetTimeline (last_resize).SizeHigh;
+		}
+		
+		ReadCheckpoint (out current_type_data, out dummy);
+		Split (time);
 	}
 	
 	void Split (int time)
@@ -41,8 +65,6 @@ class TypeTabulator : ProfileReader {
 		
 		foreach (int i in td.TypeData)
 			td.TotalSize += i;
-		
-		MaxSize = Math.Max (td.HeapSize, MaxSize);
 		
 		Data.Add (td);
 	}
@@ -124,7 +146,9 @@ class TypeTabulator : ProfileReader {
 	
 	public void Process ()
 	{
-		int cutoff = (int) (MaxSize * Threshold);
+		
+		Split (end_t);
+		int cutoff = (int) (Profile.MaxSize * Threshold);
 		
 		TotalTypeSizes = new long [TypeTableSize];
 		IsSizeLongEnough = new bool [TypeTableSize];
@@ -146,5 +170,9 @@ class TypeTabulator : ProfileReader {
 				}
 			}
 		}
+	}
+	
+	public int StartTime {
+		get { return start_t; }
 	}
 }

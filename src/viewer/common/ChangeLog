@@ -1,3 +1,16 @@
+2005-02-06  Ben Maurer  <bmaurer@ximian.com>
+
+	* Profile.cs (MaxSize): new prop.
+	(ContextDataTabulator): API change of ProfileReader
+	(ContextDataTabulator.Checkpoint): missing a return here.
+
+	* ProfileReader.cs: Don't do start file pos, but start file time.
+
+	* TypeTabulator.cs: Add stuff to do a tabulation that starts
+	midfile. Remove max size type stuff.
+
+	* TypeGraphPlotter.cs: Get the max size from the profile
+
 2005-01-20  Ben Maurer  <bmaurer@ximian.com>
 
 	* Profile.cs, ProfileReader.cs: add stuff to get timeline

@@ -1,3 +1,9 @@
+2005-02-06  Ben Maurer  <bmaurer@ximian.com>
+
+	* TypeGraphViewer.cs: Changes to use the real scroller.
+
+	* HeapScroller.cs: A real scroller, based on the one in f-spot.
+
 2005-01-20  Ben Maurer  <bmaurer@ximian.com>
 
 	* TypeGraphViewer.cs: add the heap scroller in an ifdef

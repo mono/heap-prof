@@ -13,9 +13,16 @@ public abstract class ProfileReader {
 		Profile = p;
 	}
 	
-	public ProfileReader (Profile p, long startpos, int end_t)
+	public ProfileReader (Profile p, int start_t, int end_t)
 	{
-		this.startpos = startpos;
+		
+		int ev = p.Metadata.GetTimelineBefore (EventType.Checkpoint, start_t);
+		
+		if (ev != -1)
+			startpos = p.Metadata.GetTimeline (ev).FilePos;
+		else
+			startpos = 0;
+		
 		this.end_t = end_t;
 		Profile = p;
 	}

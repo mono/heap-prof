@@ -16,6 +16,7 @@ class Plotter {
 	int xsize, ysize;
 	TypeTabulator d;
 	TypeList tl;
+	Profile Profile;
 	
 	public Plotter (int xsize, int ysize, TypeTabulator d, TypeList tl)
 	{
@@ -23,6 +24,7 @@ class Plotter {
 		this.ysize = ysize;
 		this.d = d;
 		this.tl = tl;
+		this.Profile = d.Profile;
 		
 		FixupData ();
 	}
@@ -33,10 +35,12 @@ class Plotter {
 	
 	void FixupData ()
 	{
-		end_t = ((TimeData) d.Data [d.Data.Count - 1]).Time;
+		int start_t = d.StartTime;
+		int end_t = ((TimeData) d.Data [d.Data.Count - 1]).Time;
+		int del_t = end_t - start_t;
 		
 		data = new ArrayList ();
-		int size_threshold = d.MaxSize / ysize;
+		int size_threshold = Profile.MaxSize / ysize;
 		
 		foreach (TimeData td in d.Data) {
 			if (td.HeapSize < size_threshold)
@@ -48,7 +52,7 @@ class Plotter {
 			
 			p.Data = td;
 			p.Time = td.Time;
-			p.X = td.Time * xsize / end_t;
+			p.X = (td.Time - start_t) * xsize / del_t;
 			p.OtherSize = td.OtherSize;
 			p.TypeData = new int [tl.TypeIndexes.Length];
 			p.HeapSize = td.HeapSize;
@@ -92,7 +96,7 @@ class Plotter {
 					psize = tp.TypeData [i];
 				
 				line [j].X = tp.X;
-				line [j].Y = ysize - checked (offsets [j] + (int)((long)psize * (long) ysize / (long)d.MaxSize));
+				line [j].Y = ysize - checked (offsets [j] + (int)((long)psize * (long) ysize / (long)Profile.MaxSize));
 				offsets [j] = ysize - line [j].Y;
 				j ++;
 			}
@@ -124,7 +128,7 @@ class Plotter {
 				
 				int psize = tp.HeapSize;
 				line [j].X = tp.X;
-				line [j].Y = ysize - checked ((int)((long)psize * (long) ysize / (long)d.MaxSize));
+				line [j].Y = ysize - checked ((int)((long)psize * (long) ysize / (long)Profile.MaxSize));
 				j ++;
 			}
 			

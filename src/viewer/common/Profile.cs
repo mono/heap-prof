@@ -21,33 +21,26 @@ public class Profile {
 	
 	public int [] GetContextObjsForTime (int max_t)
 	{
-		int ev = Metadata.GetTimelineBefore (EventType.Checkpoint, max_t);
-		ContextDataTabulator tab;
-		
-		if (ev != -1)
-			tab = new ContextDataTabulator (this, Metadata.GetTimeline (ev).FilePos, max_t);
-		else
-			tab = new ContextDataTabulator (this, 0, max_t);
-		
+		ContextDataTabulator tab = new ContextDataTabulator (this, max_t);
 		tab.Read ();
-		
 		return tab.ContextData;
 		
 	}
 	
 	class ContextDataTabulator : ProfileReader {
 		public int [] ContextData;
-		public ContextDataTabulator (Profile p, long s, int e) : base (p, s, e)
+		public ContextDataTabulator (Profile p, int s) : base (p, s, s)
 		{
-			if (s == 0)
+			if (p.Metadata.GetTimelineBefore (EventType.Checkpoint, s) == -1)
 				ContextData = new int [ContextTableSize];
 		}
 			
 		protected override void Checkpoint (int time, int event_num)
 		{
-			if (ContextData != null)
+			if (ContextData != null) {
 				base.Checkpoint (time, event_num);
-			
+				return;
+			}
 			int [] dummy;
 			
 			ReadCheckpoint (out dummy, out ContextData);
@@ -99,5 +92,22 @@ public class Profile {
 	
 	public Timeline [] Timeline {
 		get { return Metadata.Timeline; }
+	}
+	
+	int max_size = -1;
+	public int MaxSize {
+		get {
+			
+			if (max_size != -1)
+				return max_size;
+			
+			Timeline [] tl = Timeline;
+			
+			for (int i = tl.Length - 1; i >= 0; i --)
+				if (tl [i].Event == EventType.HeapResize)
+					return max_size = tl [i].SizeHigh;
+				
+			return max_size = 0;
+		}
 	}
 }

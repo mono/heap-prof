@@ -7,35 +7,40 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 class TypeGraphComponent : ShellComponent {
-	DrawingArea d;
+	TypeGrpah d;
 	TypeTabulator t;
 	TypeList tl;
 	HPaned paned;
 	VBox box;
 	HeapScroller scroller;
+	public Profile Profile;
 	
 	public TypeGraphComponent (Profile p)
 	{
-		
-		t = new TypeTabulator (p);
-		t.Read ();
-		t.Process ();
+		Profile = p;
 		
 		Title = "Type Graph";
-		
-		this.t = t;
-		tl = new TypeList (t);
 		
 		box = new VBox ();
 		box.Spacing = 12;
 		
-
-		
 		paned = new HPaned ();
 		
-		d = new PrettyGraphic (t, tl, this);
+
+		Add (box);
+
+		scroller = new HeapScroller (p);
+		scroller.OnScrolled += delegate { t = null; d.UpdateCache (); d.QueueDraw (); };
 		
-		
+		box.PackStart (scroller, false, false, 0);
+
+		// FIXME: HACKISH
+		TypeTabulator xxx = new TypeTabulator (p);
+		xxx.Read ();
+		xxx.Process ();
+		tl = new TypeList (xxx);
+
+		d = new TypeGrpah (tl, this);
 		
 		ScrolledWindow sw = new ScrolledWindow ();
 		sw.Add (new TypeListNodeStore (tl).GetNodeView ());
@@ -43,15 +48,29 @@ class TypeGraphComponent : ShellComponent {
 		paned.Pack1 (d, true, true);
 		paned.Pack2 (sw, false, true);
 
-		Add (box);
-
-#if false
-		scroller = new HeapScroller (p);
-		
-		box.PackStart (scroller, false, false, 0);
-#endif
-
 		box.PackStart (paned, true, true, 0);
+	}
+	
+	public int StartTime {
+		get { return scroller.StartTime; }
+	}
+	
+	public int EndTime {
+		get { return scroller.EndTime; }
+	}
+	
+	public TypeTabulator CurrentTabulator {
+		get {
+			if (t == null) {
+				Console.WriteLine ("start: {0}", StartTime);
+				Console.WriteLine ("end: {0}", EndTime);
+				t = new TypeTabulator (Profile, StartTime, EndTime);
+				t.Read ();
+				t.Process ();
+			}
+			
+			return t;
+		}
 	}
 }
 
@@ -170,23 +189,20 @@ class TypeListTreeNode : TreeNode {
 //
 // A sample using inheritance to draw
 //
-class PrettyGraphic : DrawingArea {
-
-	TypeTabulator t;
+class TypeGrpah : DrawingArea {
 	TypeList tl;
 	
 	Gdk.Pixmap bitmap_cache;
 	//System.Drawing.Bitmap bitmap_cache;
-	Gdk.Rectangle current_allocation;	// The current allocation. 
+	Gdk.Rectangle allocation;	// The current allocation. 
 	bool allocated = false;
 	Plotter plot;
 	TypeGraphComponent parent;
 	
-	public PrettyGraphic (TypeTabulator t, TypeList tl, TypeGraphComponent parent)
+	public TypeGrpah (TypeList tl, TypeGraphComponent parent)
 	{
 		Events |= Gdk.EventMask.ButtonPressMask;
-		
-		this.t = t;
+
 		this.tl = tl;
 		this.parent = parent;
 		SetSizeRequest (700, 700);
@@ -196,12 +212,12 @@ class PrettyGraphic : DrawingArea {
 	{
 		
 		if (bitmap_cache == null) {
-			bitmap_cache = new Gdk.Pixmap (GdkWindow, current_allocation.Width, current_allocation.Height, -1);
+			bitmap_cache = new Gdk.Pixmap (GdkWindow, allocation.Width, allocation.Height, -1);
 			bitmap_cache.DrawRectangle (Style.WhiteGC, true, 0, 0,
-				current_allocation.Width, current_allocation.Height);
+				allocation.Width, allocation.Height);
 			
 			using (Graphics g = Gtk.DotNet.Graphics.FromDrawable (bitmap_cache)) {
-				plot = new Plotter (current_allocation.Width, current_allocation.Height, t, tl);
+				plot = new Plotter (allocation.Width, allocation.Height, parent.CurrentTabulator, tl);
 				plot.Draw (g);
 			}
 		}
@@ -219,12 +235,12 @@ class PrettyGraphic : DrawingArea {
 	protected override void OnSizeAllocated (Gdk.Rectangle allocation)
 	{
 		allocated = true;
-		current_allocation = allocation;
+		this.allocation = allocation;
 		UpdateCache ();
 		base.OnSizeAllocated (allocation);
 	}
 
-	void UpdateCache ()
+	public void UpdateCache ()
 	{
 		if (bitmap_cache != null)
 			bitmap_cache.Dispose ();
@@ -243,7 +259,7 @@ class PrettyGraphic : DrawingArea {
 			if (tp.X >= e.X) {
 				Console.WriteLine ("Found {0}", tp.Time);
 				
-				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, t.Profile));
+				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, parent.Profile));
 				
 				break;
 			}

@@ -6,90 +6,410 @@ using Gtk;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-//
-// A sample using inheritance to draw
-//
-class HeapScroller : DrawingArea {
+// because some people are too fucking scared of something not in ECMA
+using GRect = Gdk.Rectangle;
 
-	Profile p;
+public class HeapScroller : Bin {
+	int border = 8;
+	int box_spacing = 2;
+	int box_top_padding = 6;
+	private Glass glass;
+
+	Gdk.Window event_window;
+
+	public GRect background;
+	public GRect legend;
 	
-	Gdk.Pixmap bitmap_cache;
-	
-	Gdk.Rectangle current_allocation;	// The current allocation. 
-	bool allocated = false;
-	
-	public HeapScroller (Profile p)
+	static bool BoxTest (GRect bounds, double x, double y) 
 	{
-		this.p = p;
-		Events |= Gdk.EventMask.ButtonPressMask;
-		
-		SetSizeRequest (100, 100);
+		if (x >= bounds.X && 
+		    x < bounds.X + bounds.Width && 
+		    y >= bounds.Y &&
+		    y < bounds.Y + bounds.Height)
+			return true;
+
+		return false;
 	}
-			       
+	
+	protected override bool OnButtonPressEvent (Gdk.EventButton args)
+	{
+		double x = args.X + Allocation.X;
+                double y = args.Y + Allocation.Y;
+		
+		if (glass.IsInside (x, y))
+			glass.StartDrag (x, y, args.Time);
+		else {
+			int x_new = (int) x - background.X;
+			
+			if (x_new < 0)
+				x_new = 0;
+			else if (x_new + glass.Width > background.Width)
+				x_new = background.Width - glass.Width;
+
+			glass.Position = x_new;
+			
+			ScrollChanged ();
+		}
+		
+		return base.OnButtonPressEvent (args);
+	}
+	
+	protected override bool OnButtonReleaseEvent (Gdk.EventButton args) 
+	{
+		double x = args.X + Allocation.X;
+                double y = args.Y + Allocation.Y;
+		
+		if (glass.Dragging)
+			glass.EndDrag (x, y);
+		
+		return base.OnButtonReleaseEvent (args);
+	}
+
+	protected override bool OnMotionNotifyEvent (Gdk.EventMotion args) 
+	{
+		double x = args.X + Allocation.X;
+                double y = args.Y + Allocation.Y;
+		
+		
+		GRect box = glass.Bounds ();
+
+		if (glass.Dragging) {
+			glass.UpdateDrag (x, y);
+
+		} else {
+			if (glass.IsInside (x, y))
+				glass.State = StateType.Prelight;
+			else 
+				glass.State = StateType.Normal;
+		}
+
+		return base.OnMotionNotifyEvent (args);
+	}
+
+	protected override void OnRealized ()
+	{
+		Flags |= (int)WidgetFlags.Realized;
+		GdkWindow = ParentWindow;
+
+		base.OnRealized ();
+		
+		Gdk.WindowAttr attr = Gdk.WindowAttr.Zero;
+		attr.WindowType = Gdk.WindowType.Child;
+
+		attr.X = Allocation.X;
+		attr.Y = Allocation.Y;
+		attr.Width = Allocation.Width;
+		attr.Height = Allocation.Height;
+		attr.Wclass = Gdk.WindowClass.InputOnly;
+		attr.EventMask = (int) Events;
+		attr.EventMask |= (int) (Gdk.EventMask.ButtonPressMask | 
+			Gdk.EventMask.ButtonReleaseMask | 
+			Gdk.EventMask.PointerMotionMask);
+			
+		event_window = new Gdk.Window (GdkWindow, attr, (int) (Gdk.WindowAttributesType.X | Gdk.WindowAttributesType.Y));
+		event_window.UserData = this.Handle;
+	}
+
+	protected override void OnUnrealized () 
+	{
+		event_window.Dispose ();
+		event_window = null;
+	}
+	
+	protected void ScrollChanged ()
+	{
+		if (OnScrolled != null)
+			OnScrolled ();
+	}
+	
+	public abstract class Manipulator {
+		protected HeapScroller selector;
+		public bool Dragging;
+
+		int x_0;
+		int x_n;
+			
+		public abstract int Width {
+			get;
+		}
+			
+
+		public void StartDrag (double x, double y, uint time) 
+		{
+			State = StateType.Active;
+			Dragging = true;
+			x_n = Position;
+			x_0 = (int)x;
+			
+			Console.WriteLine ("Position: {0}", Position);
+		}
+
+		public void UpdateDrag (double x, double y)
+		{
+			
+			GRect then = Bounds ();
+			
+			int x_new = position + (int) x - x_0;
+			
+			if (x_new < 0)
+				x_n = 0;
+			else if (x_new + Width > selector.background.Width)
+				x_n = selector.background.Width - Width;
+			else
+				x_n = x_new;
+			
+			GRect now = Bounds ();
+			
+			if (selector.Visible) {
+				selector.GdkWindow.InvalidateRect (then, false);
+				selector.GdkWindow.InvalidateRect (now, false);
+			}
+		}
+
+		public void EndDrag (double x, double y)
+		{
+			GRect box = Bounds ();
+
+			Position = x_n;
+			State = StateType.Prelight;
+			
+			Dragging = false;
+
+			selector.ScrollChanged ();
+			
+			Console.WriteLine ("Position: {0}", Position);
+		}
+
+		private StateType state;
+		public StateType State {
+			get {
+				return state;
+			}
+			set {
+				if (state != value) {
+					selector.GdkWindow.InvalidateRect (Bounds (), false);
+				}
+				state = value;
+			}
+		}
+
+		private int position;
+		public int Position {
+			get {
+				return position;
+			}
+			set {
+				GRect then = Bounds ();
+				position = value;
+				GRect now = Bounds ();
+				
+				if (selector.Visible) {
+					selector.GdkWindow.InvalidateRect (then, false);
+					selector.GdkWindow.InvalidateRect (now, false);
+				}
+				
+				
+			}
+		}
+
+		public abstract void Draw (GRect area);
+		public abstract GRect Bounds ();
+
+		public virtual bool IsInside (double x, double y)
+		{
+			return BoxTest (Bounds (), x, y);
+		}
+
+		public Manipulator (HeapScroller selector) 
+		{
+			this.selector = selector;
+		}
+		
+		protected int XPos {
+			get {
+				if (! Dragging)
+					return Position;
+				
+				return x_n;
+			}
+		}
+	}
+	
+	private class Glass : Manipulator {
+		private int handle_height = 15;
+
+		private int border {
+			get {
+				return selector.box_spacing * 2;
+			}
+		}
+		
+		private GRect InnerBounds ()
+		{
+			GRect box = GRect.Zero;
+			box.Height = selector.background.Height;
+			box.Y = selector.background.Y;
+			
+			box.X = selector.background.X + XPos;
+			box.Width = Width;
+			
+			return box;
+		}
+		
+		public override GRect Bounds () 
+		{
+			GRect box = InnerBounds ();
+
+			box.X -= border;
+			box.Y -= border;
+			box.Width += 2 * border;
+			box.Height += 2 * border + handle_height;
+			
+			return box;
+		}
+
+		public override void Draw (GRect area)
+		{
+			GRect inner = InnerBounds ();
+			GRect bounds = Bounds ();
+			
+			if (bounds.Intersect (area, out area)) {
+				
+				
+				int i = 0;
+				GRect box = inner;
+				box.Width -= 1;
+				box.Height -= 1;
+				while (i < border) {
+					box.X -= 1;
+					box.Y -= 1;
+					box.Width += 2;
+					box.Height += 2;
+				
+					selector.GdkWindow.DrawRectangle (selector.Style.BackgroundGC (State), 
+									  false, box);
+					i++;
+				}
+			
+				Style.PaintHandle (selector.Style, selector.GdkWindow, State, ShadowType.None, 
+						    area, selector, "glass", bounds.X, inner.Y + inner. Height, 
+						    bounds.Width, handle_height + border, Orientation.Horizontal);
+
+				Style.PaintShadow (selector.Style, selector.GdkWindow, State, ShadowType.Out, 
+						   area, selector, null, bounds.X, bounds.Y, bounds.Width, bounds.Height);
+
+				Style.PaintShadow (selector.Style, selector.GdkWindow, State, ShadowType.In, 
+						   area, selector, null, inner.X, inner.Y, inner.Width, inner.Height);
+
+			}
+		}
+		
+		public override int Width {
+			get { return (selector.TimeSpan * selector.background.Width) / selector.maxt; }
+		}
+		
+		public Glass (HeapScroller selector) : base (selector) {}
+	}
+	
+	protected override void OnMapped ()
+	{
+		base.OnMapped ();
+		if (event_window != null)
+			event_window.Show ();
+	}
+	
 	protected override bool OnExposeEvent (Gdk.EventExpose args)
 	{
-		
 		if (bitmap_cache == null) {
-			bitmap_cache = new Gdk.Pixmap (GdkWindow, current_allocation.Width, current_allocation.Height, -1);
+			bitmap_cache = new Gdk.Pixmap (GdkWindow, background.Width, background.Height, -1);
 			bitmap_cache.DrawRectangle (Style.WhiteGC, true, 0, 0,
-				current_allocation.Width, current_allocation.Height);
+				background.Width, background.Height);
 			
 			using (Graphics g = Gtk.DotNet.Graphics.FromDrawable (bitmap_cache)) {
 				Plot (g);
 			}
 		}
 		
-		Gdk.Rectangle area = args.Area;
+		
+		Gdk.Rectangle area;
+		if (args.Area.Intersect (background, out area)) {							
+			GRect active = background;
+
+			if (active.Intersect (area, out active)) {
+				GdkWindow.DrawRectangle (Style.BaseGC (State), true, active);
+			}
+		}
+		
 		GdkWindow.DrawDrawable (Style.BlackGC,
 						bitmap_cache,
-						area.X, area.Y,
-						area.X, area.Y,
-						area.Width, area.Height);
-		
-		return true;
+						0, 0,
+						background.X, background.Y,
+						background.Width, background.Height);
+
+		Style.PaintShadow (this.Style, GdkWindow, State, ShadowType.In, area, 
+				   this, null, background.X, background.Y, 
+				   background.Width, background.Height);
+		       
+		if (glass != null) {
+			glass.Draw (args.Area);
+		}
+
+		return base.OnExposeEvent (args);
 	}
 	
-	protected override void OnSizeAllocated (Gdk.Rectangle allocation)
+	protected override void OnSizeAllocated (GRect alloc)
 	{
-		allocated = true;
-		current_allocation = allocation;
+		base.OnSizeAllocated (alloc);
+		int legend_height = 20;
+
+		background = new GRect (alloc.X + border, alloc.Y + border, 
+					    alloc.Width - 2* border,
+					    alloc.Height - 2 * border - legend_height);
+
+		legend = new GRect (border, background.Y + background.Height,
+					background.Width, legend_height);
+
+		if (event_window != null) {
+			event_window.MoveResize (alloc.X, alloc.Y, alloc.Width, alloc.Height);
+			 event_window.Move (alloc.X, alloc.Y);
+		}
+			
 		UpdateCache ();
-		base.OnSizeAllocated (allocation);
+		
+		Console.WriteLine ("Background {0}", background);
 	}
 
-	void UpdateCache ()
+	public HeapScroller (Profile p)
 	{
-		if (bitmap_cache != null)
-			bitmap_cache.Dispose ();
-			
-		bitmap_cache = null;
-	}
-	
-	protected override bool OnButtonPressEvent (Gdk.EventButton e)
-	{
-		if (e.Button != 3)
-			return false;
-		
-		Console.WriteLine ("Button press at ({0}, {1})", e.X, e.Y);
-		
-		return true;
-	}
-	
-	
-	void Plot (Graphics g)
-	{
-		int maxx = current_allocation.Width;
-		int maxy = current_allocation.Height;
-		
+		this.p = p;
+		Events |= Gdk.EventMask.ButtonPressMask;
 		
 		Timeline [] tl = p.Timeline;
 		
-		int maxt = tl [tl.Length - 1].Time;
-		int maxsz = 0;
+		maxt = tl [tl.Length - 1].Time;
 		
-		foreach (Timeline t in tl)
-			if (t.Event == EventType.HeapResize)
-				maxsz = t.SizeHigh;
+		time_span = maxt / 5;
+		
+		SetSizeRequest (100, 100);
+		
+		Flags |= (int)WidgetFlags.NoWindow;
+
+		background = GRect.Zero;
+		glass = new Glass (this);
+	}
+	
+	Profile p;
+	
+	Gdk.Pixmap bitmap_cache;
+
+	void Plot (Graphics g)
+	{
+		int maxx = background.Width;
+		int maxy = background.Height;
+		
+		Timeline [] tl = p.Timeline;
+
+		int maxsz = p.MaxSize;
 		
 		
 		int lastx = 0;
@@ -127,4 +447,30 @@ class HeapScroller : DrawingArea {
 			lasty = ly;
 		}
 	}
+	
+	int maxt;
+	int time_span;
+	
+	public int StartTime {
+		get { return (glass.Position * maxt) / background.Width; }
+	}
+	
+	public int EndTime {
+		get { return StartTime + time_span; }
+	}
+	
+	public int TimeSpan {
+		get { return time_span; }
+	}
+	
+	void UpdateCache ()
+	{
+		if (bitmap_cache != null)
+			bitmap_cache.Dispose ();
+			
+		bitmap_cache = null;
+	}
+
+	public delegate void ScrollChangedDelegate ();
+	public event ScrollChangedDelegate OnScrolled;
 }
