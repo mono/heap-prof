@@ -35,18 +35,25 @@ public abstract class ProfileReader {
 			while (true) {
 				int time = br.ReadInt32 ();
 				
-				// end of file
-				if (time == -1 || time > end_t)
+				// eof
+				if (time == -1)
 					return;
 				
-				if ((time & (int)(1 << 31)) == 0) {
+				bool is_alloc = (time & (int)(1 << 31)) == 0;
+				time &= int.MaxValue;
+				
+				// we are done
+				if (time > end_t)
+					return;
+				
+				if (is_alloc) {
 					// allocation
 					int ctx = br.ReadInt32 ();
 					
 					AllocationSeen (time, GetContext (ctx), br.BaseStream.Position);
 					
 				} else {
-					time &= int.MaxValue;
+					
 					
 					EventType event_type = (EventType) br.ReadInt32 ();
 					int event_num = br.ReadInt32 ();
@@ -182,11 +189,11 @@ public class Metadata {
 	{
 		int last = -1;
 		for (int i = 0; i < timeline.Length; i ++) {
-			if (timeline [i].Event == e)
-				last = i;
-			
 			if (timeline [i].Time >= time)
 				break;
+			
+			if (timeline [i].Event == e)
+				last = i;
 		}
 		
 		return last;

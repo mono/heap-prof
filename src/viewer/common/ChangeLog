@@ -1,3 +1,10 @@
+2005-01-17  Ben Maurer  <bmaurer@ximian.com>
+
+	* ProfileReader.cs (GetTimelineBefore): Make this actually get the
+	one before ;-).
+
+	(Read): Make the end time thing really work.
+
 2005-01-16  Ben Maurer  <bmaurer@ximian.com>
 
 	* ProfileReader.cs (ReadCheckpoint, Checkpoint, GetTimelineBefore,
