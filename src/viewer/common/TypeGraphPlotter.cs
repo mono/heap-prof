@@ -131,7 +131,7 @@ class RandomBrush {
 	static Brush [] brushes;
 	
 	const int N_COLORS = 26;
-	const int MOD = 5;
+	const int MOD = 7;
 
 	static RandomBrush () {
 		
@@ -206,12 +206,19 @@ class TypeList {
 	public Brush [] TypeBrushes;
 	public string [] Names;
 	
-	public TypeList (TypeTabulator d)
+	public TypeList (Profile p)
 	{
 		int num = 0;
 		
-		foreach (bool b in d.IsSizeLongEnough)
-			if (b)
+		long total_size = 0;
+		
+		foreach (long l in p.Metadata.TypeTotalAllocs)
+			total_size += l;
+		
+		long threshold = total_size / 1000;
+		
+		foreach (long l in p.Metadata.TypeTotalAllocs)
+			if (l > threshold)
 				num ++;
 			
 		Sizes = new long [num];
@@ -220,9 +227,9 @@ class TypeList {
 		TypeBrushes = new Brush [num];
 			
 		num = 0;
-		for (int i = 0; i < d.TotalTypeSizes.Length; i ++) {
-			if (d.IsSizeLongEnough [i]) {
-				Sizes [num] = d.TotalTypeSizes [i];
+		for (int i = 0; i < p.Metadata.TypeTotalAllocs.Length; i ++) {
+			if (p.Metadata.TypeTotalAllocs [i] > threshold) {
+				Sizes [num] = p.Metadata.TypeTotalAllocs [i];
 				TypeIndexes [num] = i;
 				num ++;
 			}
@@ -234,7 +241,7 @@ class TypeList {
 		
 		for (int i = 0; i < Sizes.Length; i ++) {
 			TypeBrushes [i] = rb.Next ();
-			Names [i] = d.GetTypeName (TypeIndexes [i]);
+			Names [i] = p.GetTypeName (TypeIndexes [i]);
 		}
 	}
 }

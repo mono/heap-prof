@@ -1,3 +1,8 @@
+2005-03-28  Ben Maurer  <bmaurer@ximian.com>
+
+	* TypeGraphViewer.cs: Fix up the hit testing now that we have
+	axes. Also, use the new color labeling thingy.
+
 2005-03-24  Ben Maurer  <bmaurer@ximian.com>
 
 	* TypeGraphViewer.cs: And now the y axis :-).

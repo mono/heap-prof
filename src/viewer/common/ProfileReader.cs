@@ -172,10 +172,12 @@ public class Metadata {
 	int [][] backtraceTable;
 	Context [] contextTable;
 	Timeline [] timeline;
+	long [] type_total_allocs;
 	
 	public int TypeTableSize { get { return typeTable.Length; } }
 	public int ContextTableSize { get { return contextTable.Length; } }
 	public Timeline [] Timeline { get { return timeline; } }
+	public long [] TypeTotalAllocs { get { return type_total_allocs; } }
 	
 	public string GetTypeName (int idx)
 	{
@@ -231,6 +233,7 @@ public class Metadata {
 			backtraceTable = ReadBacktraceTable (br);
 			contextTable = ReadContextTable (br);
 			timeline = ReadTimeline (br);
+			type_total_allocs = ReadTypeTotalAllocationsTable (br);
 		}
 	}
 	
@@ -242,6 +245,18 @@ public class Metadata {
 				Console.WriteLine ("  {0}  {1}", i, methodTable [i]);
 			Console.WriteLine ();
 		}
+	}
+	
+	long [] ReadTypeTotalAllocationsTable (BinaryReader br)
+	{
+		int sz = br.ReadInt32 ();
+		
+		long [] ret = new long [sz];
+		
+		for (int i = 0; i < sz; i ++)
+			ret [i] = br.ReadInt64 ();
+		
+		return ret;
 	}
 	
 
@@ -322,7 +337,7 @@ class ProfilerSignature {
 		0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 	};
 	
-	const int Version = 4;
+	const int Version = 6;
 	
 	public static void ReadHeader (BinaryReader br, bool is_dump)
 	{

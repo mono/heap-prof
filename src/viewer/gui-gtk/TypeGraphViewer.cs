@@ -33,12 +33,8 @@ class TypeGraphComponent : ShellComponent {
 		scroller.OnScrolled += delegate { t = null; d.UpdateCache (); d.QueueDraw (); };
 		
 		box.PackStart (scroller, false, false, 0);
-
-		// FIXME: HACKISH
-		TypeTabulator xxx = new TypeTabulator (p);
-		xxx.Read ();
-		xxx.Process ();
-		tl = new TypeList (xxx);
+		
+		tl = new TypeList (p);
 
 		d = new TypeGrpah (tl, this);
 		
@@ -350,8 +346,11 @@ class TypeGrpah : DrawingArea {
 		
 		Console.WriteLine ("Button press at ({0}, {1})", e.X, e.Y);
 		
+		if (!graph_area.Contains ((int) e.X, (int) e.Y))
+			return false;
+		
 		foreach (TimePoint tp in plot.data) {
-			if (tp.X >= e.X) {
+			if (tp.X >= (e.X - graph_area.X)) {
 				Console.WriteLine ("Found {0}", tp.Time);
 				
 				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, parent.Profile));

@@ -66,6 +66,9 @@ struct _MonoProfiler {
 	int type_live_data_size;
 	int* type_live_data;
 	
+	int type_total_allocs_size;
+	guint64* type_total_allocs;
+	
 	int total_live_bytes;
 	
 	GPtrArray* timeline;
@@ -90,7 +93,7 @@ static const guint8 heap_prof_md_sig [] = {
 	0xaa, 0x93, 0xc8, 0x76, 0xf4, 0x6a, 0x95, 0x11
 };
 
-static const guint32 heap_prof_version = 4;
+static const guint32 heap_prof_version = 6;
 
 #define BT_SIZE 5
 
@@ -214,8 +217,10 @@ get_type_idx (MonoProfiler *p, MonoClass* klass)
 		
 		g_hash_table_insert (p->klass_to_table_idx, klass, idx_plus_one);
 		
-		if (idx_plus_one > p->type_live_data_size)
+		if (idx_plus_one > p->type_live_data_size) {
 			resize_array (p->type_live_data, p->type_live_data_size, MAX (p->type_live_data_size << 1, idx_plus_one));
+			resize_array (p->type_total_allocs, p->type_total_allocs_size, MAX (p->type_total_allocs_size << 1, idx_plus_one));
+		}
 	}
 	
 	return leu32 (idx_plus_one - 1);
@@ -286,6 +291,8 @@ record_obj (MonoProfiler* p, guint32 ctx_idx, gboolean is_alloc)
 		p->total_live_bytes += size;
 		p->type_live_data [tidx] += size;
 		p->context_live_objects [cidx] ++;
+		
+		p->type_total_allocs [tidx] ++;
 	} else {
 		p->total_live_bytes -= size;
 		p->type_live_data [tidx] -= size;
@@ -541,6 +548,20 @@ write_meta_header (MonoProfiler* p)
 }
 
 static void
+write_total_allocs_table (MonoProfiler* p)
+{
+	guint32 size = p->klass_table->len;
+	int i;
+	guint32 encs = leu32 (size);
+	prof_write (p, &encs, sizeof (encs));
+	
+	for (i = 0; i < size; i ++)
+		p->type_total_allocs [i] = leu64 (p->type_total_allocs [i]);
+	
+	prof_write (p, p->type_total_allocs, size * sizeof (*p->type_total_allocs));
+}
+
+static void
 write_metadata_file (MonoProfiler* p)
 {
 	write_meta_header (p);
@@ -550,6 +571,7 @@ write_metadata_file (MonoProfiler* p)
 	write_data_table (p, p->bt_table, sizeof (IdxBacktrace));
 	write_data_table (p, p->ctx_table, sizeof (IdxAllocationCtx));
 	write_data_table (p, p->timeline, sizeof (HeapProfTimelineRec));
+	write_total_allocs_table (p);
 }
 
 
