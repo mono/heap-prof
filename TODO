@@ -1,0 +1,50 @@
+Task list:
+
+* UI Tasks
+	- Do a progress bar on loading a file
+	- Add menus
+	- Open a new profile
+	- Go to misc views
+	- Add a status bar
+	- Tooltips on the graph
+	- Select a type to highlight on the graph
+	- Filter out the crap in the heap view
+	- Context menu for graph
+	- Figure out how to handle new windows for the views Maybe a tabbed type
+	  thing is needed.
+
+* New Views
+	- Delta view -- what changed on the heap between time a and b
+	- Young objects -- what objects did not survive any gcs, only 1, etc
+	- Allocation profiler -- like the current --profile, ignore gc, etc just
+	look at who allocated
+
+* General
+	- Handle long running programs better. We are going to use up way too much
+	  ram for profiling something like f-spot
+	- Get data about the actual size of the GC heap
+	- Stuff for debugging blacklisting
+	- Look at the blocks on the heap (how many of each size / how many marks set
+	  in each)
+	- Gnome integration (MIME types, icons, etc)
+	- Printing reports
+	- Export to HTML
+	- More 0. For example, I might want to see `what is the size of all
+	  Mono.CSharp.Expression objects.' Need an ad hoc query interface.
+	- Record info about program execution in the profile (file name, args, cwd,
+	  time)
+	- Let the user create annotations
+	- Let the user save views
+	- Work on the size of the profile. Corlib building takes over 50 mb.
+	- Work on performance of loading a profile
+
+* Test cases
+Get useful profiles on:
+	- MonoDevelop
+	- iFolder
+	- monodoc
+	- mcs
+	- beagle
+	- zlm
+
+Find problems that hinder performance work.
