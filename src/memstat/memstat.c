@@ -4,9 +4,15 @@
 #include <glib.h>
 #include <pthread.h>
 #include <malloc.h>
+#include <mono/metadata/profiler.h>
 
 #define KB (1024)
 #define MB (KB*1024)
+
+struct _MonoProfiler {
+};
+
+static int gc_heap_size = 0;
 
 static void
 size_to_units (int size, double* out_size, const char** out_units)
@@ -46,7 +52,8 @@ void worker (gpointer dummy)
 		double total_arena_size;
 		const char* total_arena_units;
 		
-		mono_profiler_gc_get_heap_stats (&gc_arena, &gc_live);
+		gc_live = mono_gc_get_total_bytes ();
+		gc_arena = gc_heap_size;
 		
 		size_to_units (stats.uordblks + stats.hblkhd, &live_size, &live_units);
 		size_to_units (stats.arena, &arena_size, &arena_units);
@@ -70,10 +77,21 @@ void worker (gpointer dummy)
 	}
 }
 
+static void
+prof_heap_resize (MonoProfiler *p, guint64 new_size)
+{
+	gc_heap_size = (guint32) new_size;
+}
 
 void
 mono_profiler_startup (const char *desc)
 {
+	MonoProfiler* p = g_new0 (MonoProfiler, 1);
 	pthread_t tid;
 	pthread_create(& tid, NULL, (void *) worker, NULL);
+	
+	mono_profiler_install_gc (NULL, prof_heap_resize);
+	mono_profiler_set_events (MONO_PROFILE_GC);
+	
+	mono_profiler_install (p, NULL);
 }

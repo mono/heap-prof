@@ -1,3 +1,7 @@
+2005-01-23  Ben Maurer  <bmaurer@ximian.com>
+
+	* memstat.c: Update, after api changes
+
 2005-01-22  Ben Maurer  <bmaurer@ximian.com>
 
 	* memstat.c (size_to_units): Casts to double. Duh!

@@ -394,14 +394,20 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 }
 
 static void
-prof_marks_set (MonoProfiler *p, int gc_num)
+prof_gc_collection (MonoProfiler *p, MonoGcEvent e, int gen)
 {
 	HeapProfGCRec rec;
-	HeapProfTimelineRec* trec = g_new0 (HeapProfTimelineRec, 1);
+	HeapProfTimelineRec* trec;
 	
 	guint64 pos;
-	guint32 time = get_delta_t (p);
+	guint32 time;
 	guint32 old_size;
+	
+	if (e != MONO_GC_EVENT_MARK_END)
+		return;
+	
+	time = get_delta_t (p);
+	trec = g_new0 (HeapProfTimelineRec, 1);
 	
 	hp_lock_enter ();
 	
@@ -417,7 +423,7 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 	for (l = p->live_allocs; l; l = next) {
 		next = l->next;
 		
-		if (! mono_profiler_mark_set (l->obj)) {
+		if (! mono_object_is_alive (l->obj)) {
 			prof_write (p, &l->rec, sizeof (l->rec));
 			
 			record_obj (p, l->rec.alloc_ctx, FALSE);
@@ -449,8 +455,9 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 }
 
 static void
-prof_heap_resize (MonoProfiler *p, int new_size)
+prof_heap_resize (MonoProfiler *p, guint64 new_size)
 {
+	/* FIXME: 64 bit safety for the cast of new_size */
 	HeapProfHeapResizeRec rec;
 	HeapProfTimelineRec* trec = g_new0 (HeapProfTimelineRec, 1);
 
@@ -461,14 +468,14 @@ prof_heap_resize (MonoProfiler *p, int new_size)
 	
 	rec.time = leu32 (time | (1 << 31));
 	rec.event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
-	rec.new_size = leu32 (new_size);
+	rec.new_size = leu32 ((guint32) new_size);
 	rec.event_num = p->timeline->len + 1;
 	
 	pos = prof_write (p, &rec, sizeof (rec));
 	
 	trec->time = leu32 (time);
 	trec->event = leu32 (HEAP_PROF_EVENT_RESIZE_HEAP);
-	trec->size_high = leu32 (new_size);
+	trec->size_high = leu32 ((guint32) new_size);
 	trec->file_pos = leu64 (pos);
 	
 	g_ptr_array_add (p->timeline, trec);
@@ -665,7 +672,7 @@ mono_profiler_startup (const char *desc)
 	write_header (p);
 	
 	mono_profiler_install_allocation (write_allocation);
-	mono_profiler_install_gc (prof_marks_set, prof_heap_resize);
+	mono_profiler_install_gc (prof_gc_collection, prof_heap_resize);
 	mono_profiler_set_events (MONO_PROFILE_ALLOCATIONS | MONO_PROFILE_GC);
 	
 	mono_profiler_install (p, mono_heap_prof_shutdown);

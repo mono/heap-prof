@@ -2,12 +2,20 @@ Index: libgc/include/gc.h
 ===================================================================
 --- libgc/include/gc.h	(revision 39325)
 +++ libgc/include/gc.h	(working copy)
-@@ -91,7 +91,22 @@
- 			/* If it returns, it must return 0 or a valid	*/
+@@ -92,6 +92,28 @@
  			/* pointer to a previously allocated heap 	*/
  			/* object.					*/
-+			
-+GC_API GC_PTR (*GC_profile_marks_set) GC_PROTO((int col_num));
+ 
++typedef enum {
++	GC_EVENT_BEGIN,
++	GC_EVENT_MARK_BEGIN,
++	GC_EVENT_MARK_END,
++	GC_EVENT_RECLAIM_BEGIN,
++	GC_EVENT_RECLAIM_END,
++	GC_EVENT_END,
++} GCProfileEvent;
++
++GC_API GC_PTR (*GC_profile_collect) GC_PROTO((GCProfileEvent e));
 +			/* Invoked on every collection. At this time mark
 +			 * bits are set. A profiler would use this to do 
 +			 * a heap profile: so it can see what objects are
@@ -16,11 +24,9 @@ Index: libgc/include/gc.h
 +			 
 +GC_API GC_PTR (*GC_profile_heap_resize) GC_PROTO((int new_size));
 +			/* Invoked when the heap grows                  */
- 
++
 +/* Slow/general mark bit manipulation: */
 +GC_API int GC_is_marked GC_PROTO((char * p));
-+GC_API void GC_clear_mark_bit GC_PROTO((char * p));
-+GC_API void GC_set_mark_bit GC_PROTO((char * p));
 +
  GC_API int GC_find_leak;
  			/* Do not actually garbage collect, but simply	*/
@@ -29,45 +35,111 @@ Index: libgc/include/private/gc_priv.h
 ===================================================================
 --- libgc/include/private/gc_priv.h	(revision 39325)
 +++ libgc/include/private/gc_priv.h	(working copy)
-@@ -1781,10 +1781,7 @@
- 			
+@@ -1782,7 +1782,7 @@
  void GC_dirty_init GC_PROTO((void));
    
--/* Slow/general mark bit manipulation: */
+ /* Slow/general mark bit manipulation: */
 -GC_API GC_bool GC_is_marked GC_PROTO((ptr_t p));
--void GC_clear_mark_bit GC_PROTO((ptr_t p));
--void GC_set_mark_bit GC_PROTO((ptr_t p));
-+
++/*GC_API GC_bool GC_is_marked GC_PROTO((ptr_t p)); -- included in public iface */
+ void GC_clear_mark_bit GC_PROTO((ptr_t p));
+ void GC_set_mark_bit GC_PROTO((ptr_t p));
    
- /* Stubborn objects: */
- void GC_read_changed GC_PROTO((void));	/* Analogous to GC_read_dirty */
 Index: libgc/alloc.c
 ===================================================================
 --- libgc/alloc.c	(revision 39325)
 +++ libgc/alloc.c	(working copy)
-@@ -617,6 +617,9 @@
+@@ -260,6 +260,10 @@
+     static int n_partial_gcs = 0;
+ 
+     if (GC_should_collect()) {
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_BEGIN);
++	    
++	    
+         if (!GC_incremental) {
+             GC_gcollect_inner();
+             n_partial_gcs = 0;
+@@ -305,6 +309,10 @@
+ 	        GC_n_attempts++;
+ 	    }
+ 	}
++	
++
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_END);
+     }
+ }
+ 
+@@ -478,11 +486,16 @@
+ #   if defined(CONDPRINT) && !defined(PRINTTIMES)
+ 	if (GC_print_stats) GET_TIME(start_time);
+ #   endif
++	
+ #   if defined(REGISTER_LIBRARIES_EARLY)
+         GC_cond_register_dynamic_libraries();
+ #   endif
+     STOP_WORLD();
+     IF_THREADS(GC_world_stopped = TRUE);
++	
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_MARK_BEGIN);
++	
+ #   ifdef CONDPRINT
+       if (GC_print_stats) {
+ 	GC_printf1("--> Marking for collection %lu ",
+@@ -547,6 +560,10 @@
+             (*GC_check_heap)();
+         }
+     
++
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_MARK_END);
++	
+     IF_THREADS(GC_world_stopped = FALSE);
+     START_WORLD();
+ #   ifdef PRINTTIMES
+@@ -617,6 +634,9 @@
     }
  }
  
-+GC_PTR (*GC_profile_marks_set) GC_PROTO((int col_num));
++GC_PTR (*GC_profile_collect) GC_PROTO((GCProfileEvent e));
 +GC_PTR (*GC_profile_heap_resize) GC_PROTO((int new_size));
 +
  /* Finish up a collection.  Assumes lock is held, signals are disabled,	*/
  /* but the world is otherwise running.					*/
  void GC_finish_collection()
-@@ -638,6 +641,11 @@
+@@ -629,7 +649,11 @@
+ 	GET_TIME(start_time);
+ 	finalize_time = start_time;
+ #   endif
++	
+ 
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_RECLAIM_BEGIN);
++
+ #   ifdef GATHERSTATS
+         GC_mem_found = 0;
+ #   endif
+@@ -638,6 +662,7 @@
  	  GC_print_address_map();
  	}
  #   endif
-+	
-+	
-+    if (GC_profile_marks_set)
-+	    GC_profile_marks_set (GC_gc_no);
 +
      COND_DUMP;
      if (GC_find_leak) {
        /* Mark all objects on the free list.  All objects should be */
-@@ -960,6 +968,9 @@
+@@ -740,6 +765,10 @@
+ #   ifdef USE_MUNMAP
+       GC_unmap_old();
+ #   endif
++	
++	if (GC_profile_collect)
++		GC_profile_collect (GC_EVENT_RECLAIM_END);
++	
+ #   ifdef PRINTTIMES
+ 	GET_TIME(done_time);
+ 	GC_printf2("Finalize + initiate sweep took %lu + %lu msecs\n",
+@@ -960,6 +989,9 @@
          if (GC_collect_at_heapsize < GC_heapsize /* wrapped */)
           GC_collect_at_heapsize = (word)(-1);
  #     endif
@@ -77,19 +149,88 @@ Index: libgc/alloc.c
      return(TRUE);
  }
  
+Index: mono/metadata/gc.h
+===================================================================
+--- mono/metadata/gc.h	(revision 0)
++++ mono/metadata/gc.h	(revision 0)
+@@ -0,0 +1,28 @@
++/*
++ * metadata/gc.h: GC Public Interface.
++ *
++ * Author: Ben Maurer <bmaurer@ximian.com>
++ *
++ * (C) 2005 Novell, Inc.
++ */
++
++#ifndef __MONO_METADATA_GC_H__
++#define __MONO_METADATA_GC_H__
++
++#include <glib.h>
++#include <mono/metadata/object.h>
++
++
++typedef enum {
++	MONO_GC_EVENT_BEGIN,
++	MONO_GC_EVENT_MARK_BEGIN,
++	MONO_GC_EVENT_MARK_END,
++	MONO_GC_EVENT_RECLAIM_BEGIN,
++	MONO_GC_EVENT_RECLAIM_END,
++	MONO_GC_EVENT_END,
++} MonoGcEvent;
++
++gboolean mono_object_is_alive (MonoObject* o);
++guint64 mono_gc_get_total_bytes (void);
++
++#endif
+Index: mono/metadata/gc-internal.h
+===================================================================
+--- mono/metadata/gc-internal.h	(revision 39325)
++++ mono/metadata/gc-internal.h	(working copy)
+@@ -6,8 +6,8 @@
+  * (C) 2002 Ximian, Inc.
+  */
+ 
+-#ifndef __MONO_METADATA_GC_H__
+-#define __MONO_METADATA_GC_H__
++#ifndef __MONO_METADATA_GC_INTERNAL_H__
++#define __MONO_METADATA_GC_INTERNAL_H__
+ 
+ #include <glib.h>
+ #include <mono/metadata/object-internals.h>
+@@ -32,5 +32,5 @@
+ extern gboolean mono_gc_is_finalizer_thread (MonoThread *thread);
+ extern gpointer mono_gc_out_of_memory (size_t size);
+ 
+-#endif /* __MONO_METADATA_GC_H__ */
++#endif /* __MONO_METADATA_GC_INTERNAL_H__ */
+ 
+Index: mono/metadata/profiler-private.h
+===================================================================
+--- mono/metadata/profiler-private.h	(revision 39325)
++++ mono/metadata/profiler-private.h	(working copy)
+@@ -3,6 +3,7 @@
+ #define __MONO_PROFILER_PRIVATE_H__
+ 
+ #include <mono/metadata/profiler.h>
++#include <mono/metadata/gc.h>
+ 
+ extern MonoProfileFlags mono_profiler_events;
+ 
+@@ -46,6 +47,9 @@
+ void mono_profiler_appdomain_event  (MonoDomain *domain, int code);
+ void mono_profiler_appdomain_loaded (MonoDomain *domain, int result);
+ 
++void mono_profiler_gc (MonoGcEvent e, int gen);
++void mono_profiler_gc_heap_resize (guint64 new_size);
++
+ MonoProfileCoverageInfo* mono_profiler_coverage_alloc (MonoMethod *method, int entries);
+ void                     mono_profiler_coverage_free  (MonoMethod *method);
+ 
 Index: mono/metadata/profiler.c
 ===================================================================
 --- mono/metadata/profiler.c	(revision 39325)
 +++ mono/metadata/profiler.c	(working copy)
-@@ -12,6 +12,7 @@
- #ifdef HAVE_BACKTRACE_SYMBOLS
- #include <execinfo.h>
- #endif
-+#include <mono/os/gc_wrapper.h>
- 
- static MonoProfiler * current_profiler = NULL;
- 
-@@ -46,6 +47,9 @@
+@@ -46,6 +46,9 @@
  static MonoProfileThreadFunc   thread_start;
  static MonoProfileThreadFunc   thread_end;
  
@@ -99,29 +240,26 @@ Index: mono/metadata/profiler.c
  static MonoProfileCoverageFilterFunc coverage_filter_cb;
  
  static MonoProfileFunc shutdown_callback;
-@@ -162,8 +166,30 @@
- 	class_start_unload = start_unload;
- 	class_end_unload = end_unload;
+@@ -164,6 +167,27 @@
  }
-+static void
-+mono_profiler_heap_resize (int new_size)
+ 
+ void
++mono_profiler_gc_heap_resize (guint64 new_size)
 +{
 +	if ((mono_profiler_events & MONO_PROFILE_GC) && heap_resize)
 +		heap_resize (current_profiler, new_size);
 +}
- 
-+static void
-+mono_profiler_gc (int gc_num)
++
++void
++mono_profiler_gc (MonoGcEvent e, int gen)
 +{
 +	if ((mono_profiler_events & MONO_PROFILE_GC) && on_gc)
-+		on_gc (current_profiler, gc_num);
++		on_gc (current_profiler, e, gen);
 +}
 +
- void
++void
 +mono_profiler_install_gc (MonoProfileGCFunc f, MonoProfileGCHeapResizeFunc hf)
 +{
-+	GC_profile_marks_set = mono_profiler_gc;
-+	GC_profile_heap_resize = mono_profiler_heap_resize;
 +	on_gc = f;
 +	heap_resize = hf;
 +}
@@ -130,7 +268,7 @@ Index: mono/metadata/profiler.c
  mono_profiler_method_enter (MonoMethod *method)
  {
  	if ((mono_profiler_events & MONO_PROFILE_ENTER_LEAVE) && method_enter)
-@@ -226,6 +252,7 @@
+@@ -226,6 +250,7 @@
  		thread_end (current_profiler, tid);
  }
  
@@ -138,43 +276,28 @@ Index: mono/metadata/profiler.c
  void 
  mono_profiler_assembly_event  (MonoAssembly *assembly, int code)
  {
-@@ -357,6 +384,22 @@
- 		shutdown_callback (current_profiler);
- }
- 
-+gboolean
-+mono_profiler_mark_set (MonoObject* o)
-+{
-+	return GC_is_marked (o);
-+}
-+
-+void
-+mono_profiler_gc_get_heap_stats (int* arena_size, int* live_bytes)
-+{
-+	if (arena_size)
-+		*arena_size = GC_get_heap_size ();
-+	
-+	if (live_bytes)
-+		*live_bytes = GC_get_heap_size () - GC_get_free_bytes ();
-+}
-+
- static GHashTable *coverage_hash = NULL;
- 
- MonoProfileCoverageInfo* 
 Index: mono/metadata/profiler.h
 ===================================================================
 --- mono/metadata/profiler.h	(revision 39325)
 +++ mono/metadata/profiler.h	(working copy)
-@@ -64,6 +64,8 @@
+@@ -3,6 +3,7 @@
+ 
+ #include <mono/metadata/object.h>
+ #include <mono/metadata/appdomain.h>
++#include <mono/metadata/gc.h>
+ 
+ typedef enum {
+ 	MONO_PROFILE_NONE = 0,
+@@ -64,6 +65,8 @@
  typedef void (*MonoProfileThreadFunc)     (MonoProfiler *prof, guint32 tid);
  typedef void (*MonoProfileAllocFunc)      (MonoProfiler *prof, MonoObject *obj, MonoClass *klass);
  typedef void (*MonoProfileStatFunc)       (MonoProfiler *prof, guchar *ip, void *context);
-+typedef void (*MonoProfileGCFunc)       (MonoProfiler *prof, int gc_num);
-+typedef void (*MonoProfileGCHeapResizeFunc)       (MonoProfiler *prof, int new_size);
++typedef void (*MonoProfileGCFunc)       (MonoProfiler *prof, MonoGcEvent e, int gen);
++typedef void (*MonoProfileGCHeapResizeFunc)       (MonoProfiler *prof, guint64 new_size);
  
  typedef gboolean (*MonoProfileCoverageFilterFunc)   (MonoProfiler *prof, MonoMethod *method);
  
-@@ -94,8 +96,14 @@
+@@ -94,6 +97,7 @@
  void mono_profiler_install_statistical (MonoProfileStatFunc callback);
  void mono_profiler_install_coverage_filter (MonoProfileCoverageFilterFunc callback);
  void mono_profiler_coverage_get  (MonoProfiler *prof, MonoMethod *method, MonoProfileCoverageFunc func);
@@ -182,10 +305,97 @@ Index: mono/metadata/profiler.h
  
  void mono_profiler_load             (const char *desc);
  
-+/* data gathering */
-+
-+gboolean mono_profiler_mark_set (MonoObject* o);
-+void mono_profiler_gc_get_heap_stats (int* arena_size, int* live_bytes);
-+
- #endif /* __MONO_PROFILER_H__ */
+Index: mono/metadata/Makefile.am
+===================================================================
+--- mono/metadata/Makefile.am	(revision 39325)
++++ mono/metadata/Makefile.am	(working copy)
+@@ -148,7 +148,8 @@
+ 	profiler.h	\
+ 	appdomain.h	\
+ 	debug-helpers.h	\
+-	mempool.h
++	mempool.h	\
++	gc.h
  
+ pedump_SOURCES =		\
+ 	pedump.c
+Index: mono/metadata/gc.c
+===================================================================
+--- mono/metadata/gc.c	(revision 39325)
++++ mono/metadata/gc.c	(working copy)
+@@ -254,13 +254,11 @@
+ {
+ 	MONO_ARCH_SAVE_REGS;
+ 
+-#if HAVE_BOEHM_GC
+ 	if (forceCollection)
+-		GC_gcollect ();
+-	return GC_get_heap_size () - GC_get_free_bytes ();
+-#else
+-	return 0;
+-#endif
++		/* FIXME: which generation is collected? */
++		ves_icall_System_GC_InternalCollect (0);
++	
++	return mono_gc_get_total_bytes ();
+ }
+ 
+ void
+@@ -311,6 +309,26 @@
+ #endif
+ }
+ 
++gboolean
++mono_object_is_alive (MonoObject* o)
++{
++#ifdef USE_INCLUDED_LIBGC
++	return GC_is_marked (o);
++#else
++	return TRUE;
++#endif
++}
++
++guint64
++mono_gc_get_total_bytes (void)
++{
++#if HAVE_BOEHM_GC
++	return GC_get_heap_size () - GC_get_free_bytes ();
++#else
++	return 0;
++#endif
++}
++
+ static CRITICAL_SECTION allocator_section;
+ static CRITICAL_SECTION handle_section;
+ static guint32 next_handle = 0;
+@@ -691,7 +709,18 @@
+ #endif
+ }
+ 
++static void
++on_gc_profile_collect (GCProfileEvent e)
++{
++	mono_profiler_gc ((MonoGcEvent) e, 0);
++}
+ 
++static void
++on_gc_profile_heap_resize (int new_size)
++{
++	mono_profiler_gc_heap_resize (new_size);
++}
++
+ void mono_gc_init (void)
+ {
+ 	InitializeCriticalSection (&handle_section);
+@@ -702,6 +731,11 @@
+ #ifdef WITH_INCLUDED_LIBGC
+ 	gc_thread_vtable = &mono_gc_thread_vtable;
+ #endif
++
++#ifdef USE_INCLUDED_LIBGC
++	GC_profile_collect = on_gc_profile_collect;
++	GC_profile_heap_resize = on_gc_profile_heap_resize;
++#endif
+ 	
+ 	MONO_GC_REGISTER_ROOT (gc_handles);
+ 	MONO_GC_REGISTER_ROOT (gc_handle_types);
