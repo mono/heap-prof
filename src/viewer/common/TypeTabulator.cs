@@ -61,7 +61,7 @@ class TypeTabulator : ProfileReader {
 	
 	protected override void AllocationSeen (int time, Context ctx, long pos)
 	{
-		//SplitIfNeeded (time);
+		SplitIfNeeded (time);
 		
 		current_type_data [ctx.Type] += ctx.Size;
 		current_context_data [ctx.Id] ++;
