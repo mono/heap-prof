@@ -458,7 +458,7 @@ prof_gc_collection (MonoProfiler *p, MonoGCEvent e, int gen)
 }
 
 static void
-prof_heap_resize (MonoProfiler *p, guint64 new_size)
+prof_heap_resize (MonoProfiler *p, gint64 new_size)
 {
 	/* FIXME: 64 bit safety for the cast of new_size */
 	HeapProfHeapResizeRec rec;
