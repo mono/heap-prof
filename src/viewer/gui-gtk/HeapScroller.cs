@@ -20,17 +20,6 @@ public class HeapScroller : Bin {
 	public GRect background;
 	public GRect legend;
 	
-	static bool BoxTest (GRect bounds, double x, double y) 
-	{
-		if (x >= bounds.X && 
-		    x < bounds.X + bounds.Width && 
-		    y >= bounds.Y &&
-		    y < bounds.Y + bounds.Height)
-			return true;
-
-		return false;
-	}
-	
 	protected override bool OnButtonPressEvent (Gdk.EventButton args)
 	{
 		double x = args.X + Allocation.X;
@@ -217,7 +206,7 @@ public class HeapScroller : Bin {
 
 		public virtual bool IsInside (double x, double y)
 		{
-			return BoxTest (Bounds (), x, y);
+			return Bounds ().Contains ((int) x, (int) y);
 		}
 
 		public Manipulator (HeapScroller selector) 
@@ -260,10 +249,8 @@ public class HeapScroller : Bin {
 		{
 			GRect box = InnerBounds ();
 
-			box.X -= border;
-			box.Y -= border;
-			box.Width += 2 * border;
-			box.Height += 2 * border + handle_height;
+			box.Inflate (border, border);
+			box.Height += handle_height;
 			
 			return box;
 		}
@@ -281,11 +268,8 @@ public class HeapScroller : Bin {
 				box.Width -= 1;
 				box.Height -= 1;
 				while (i < border) {
-					box.X -= 1;
-					box.Y -= 1;
-					box.Width += 2;
-					box.Height += 2;
-				
+					box.Inflate (1, 1);
+					
 					selector.GdkWindow.DrawRectangle (selector.Style.BackgroundGC (State), 
 									  false, box);
 					i++;
@@ -368,22 +352,18 @@ public class HeapScroller : Bin {
 	{
 		base.OnSizeAllocated (alloc);
 		int legend_height = 20;
+		
+		background = GRect.Inflate (alloc, -border, -border);
+		background.Height -= legend_height;
 
-		background = new GRect (alloc.X + border, alloc.Y + border, 
-					    alloc.Width - 2* border,
-					    alloc.Height - 2 * border - legend_height);
-
-		legend = new GRect (border, background.Y + background.Height,
-					background.Width, legend_height);
+		legend = new GRect (border, background.Bottom, background.Width, legend_height);
 
 		if (event_window != null) {
 			event_window.MoveResize (alloc.X, alloc.Y, alloc.Width, alloc.Height);
-			 event_window.Move (alloc.X, alloc.Y);
+			event_window.Move (alloc.X, alloc.Y);
 		}
 			
 		UpdateCache ();
-		
-		Console.WriteLine ("Background {0}", background);
 	}
 
 	public HeapScroller (Profile p)

@@ -1,3 +1,7 @@
+2005-02-07  Ben Maurer  <bmaurer@ximian.com>
+
+	* HeapScroller.cs: Use my wonderful new gtk# apis for clean code.
+
 2005-02-06  Ben Maurer  <bmaurer@ximian.com>
 
 	* HeapScroller.cs (OnUnmapped): make sure that we don't get events
