@@ -1,0 +1,12 @@
+This is the Mono Heap Profiler.
+
+To install, you need to do:
+
+patch < ../heap-prof/mono.patch
+
+in your mono dir.
+
+Then do an autogen/make/make install in here.
+
+Run mono --profile=heap:outfile, then run mono-heap-prof-view
+to view it.

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec @MONO@ @prefix@/lib/mono-heap-prof/mono-heap-prof-view.exe "$@"

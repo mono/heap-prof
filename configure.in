@@ -1,0 +1,18 @@
+AC_INIT(README)
+AM_INIT_AUTOMAKE(heap-prof, 0.01)
+AC_PROG_CC
+AC_PROG_LIBTOOL
+
+PKG_CHECK_MODULES(CCOMPILE, mono glib-2.0)
+PKG_CHECK_MODULES(GTKSHARP, gtk-sharp-2.0)
+
+AC_PATH_PROG(MCS, mcs)
+AC_PATH_PROG(MONO, mono)
+
+AC_OUTPUT([
+Makefile
+src/Makefile
+src/runtime-profiler/Makefile
+src/viewer/Makefile
+src/viewer/mono-heap-prof-view
+])
