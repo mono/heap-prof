@@ -1,5 +1,8 @@
 2005-02-06  Ben Maurer  <bmaurer@ximian.com>
 
+	* HeapScroller.cs (OnUnmapped): make sure that we don't get events
+	when another tab is open. Also, remove usage of obsolete gtk stuff.
+
 	* TypeGraphViewer.cs: Changes to use the real scroller.
 
 	* HeapScroller.cs: A real scroller, based on the one in f-spot.

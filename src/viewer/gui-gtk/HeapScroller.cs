@@ -88,7 +88,7 @@ public class HeapScroller : Bin {
 
 	protected override void OnRealized ()
 	{
-		Flags |= (int)WidgetFlags.Realized;
+		WidgetFlags |= WidgetFlags.Realized;
 		GdkWindow = ParentWindow;
 
 		base.OnRealized ();
@@ -318,6 +318,13 @@ public class HeapScroller : Bin {
 			event_window.Show ();
 	}
 	
+	protected override void OnUnmapped ()
+	{
+		base.OnUnmapped ();
+		if (event_window != null)
+			event_window.Hide ();
+	}
+	
 	protected override bool OnExposeEvent (Gdk.EventExpose args)
 	{
 		if (bitmap_cache == null) {
@@ -392,9 +399,8 @@ public class HeapScroller : Bin {
 		
 		SetSizeRequest (100, 100);
 		
-		Flags |= (int)WidgetFlags.NoWindow;
+		WidgetFlags |= WidgetFlags.NoWindow;
 
-		background = GRect.Zero;
 		glass = new Glass (this);
 	}
 	
