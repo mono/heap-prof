@@ -165,8 +165,6 @@ public class HeapScroller : Bin {
 			Dragging = false;
 
 			selector.ScrollChanged ();
-			
-			Console.WriteLine ("Position: {0}", Position);
 		}
 
 		private StateType state;
@@ -175,9 +173,8 @@ public class HeapScroller : Bin {
 				return state;
 			}
 			set {
-				if (state != value) {
+				if (state != value)
 					selector.GdkWindow.InvalidateRect (Bounds (), false);
-				}
 				state = value;
 			}
 		}
@@ -196,8 +193,6 @@ public class HeapScroller : Bin {
 					selector.GdkWindow.InvalidateRect (then, false);
 					selector.GdkWindow.InvalidateRect (now, false);
 				}
-				
-				
 			}
 		}
 
@@ -261,18 +256,13 @@ public class HeapScroller : Bin {
 			GRect bounds = Bounds ();
 			
 			if (bounds.Intersect (area, out area)) {
-				
-				
-				int i = 0;
 				GRect box = inner;
 				box.Width -= 1;
 				box.Height -= 1;
-				while (i < border) {
+				for (int i = 0; i < border; i ++) {
 					box.Inflate (1, 1);
 					
-					selector.GdkWindow.DrawRectangle (selector.Style.BackgroundGC (State), 
-									  false, box);
-					i++;
+					selector.GdkWindow.DrawRectangle (selector.Style.BackgroundGC (State), false, box);
 				}
 			
 				Style.PaintHandle (selector.Style, selector.GdkWindow, State, ShadowType.None, 
@@ -321,15 +311,9 @@ public class HeapScroller : Bin {
 			}
 		}
 		
-		
-		Gdk.Rectangle area;
-		if (args.Area.Intersect (background, out area)) {							
-			GRect active = background;
-
-			if (active.Intersect (area, out active)) {
-				GdkWindow.DrawRectangle (Style.BaseGC (State), true, active);
-			}
-		}
+		GRect area;
+		if (args.Area.Intersect (background, out area))
+			GdkWindow.DrawRectangle (Style.BaseGC (State), true, area);
 		
 		GdkWindow.DrawDrawable (Style.BlackGC,
 						bitmap_cache,
