@@ -24,6 +24,7 @@ Makefile
 mime-data/Makefile
 src/Makefile
 src/runtime-profiler/Makefile
+src/desc-heap/Makefile
 src/memstat/Makefile
 src/viewer/Makefile
 src/viewer/mono-heap-prof-view
