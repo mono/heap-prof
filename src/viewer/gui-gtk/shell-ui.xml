@@ -1,0 +1,8 @@
+<ui>
+	<menubar>
+		<menu name="FileMenu" action="FileMenu">
+			<menuitem name="Open" action="OpenAction" />
+			<menuitem name="Quit" action="QuitAction" />
+		</menu>
+	</menubar>
+</ui>

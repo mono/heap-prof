@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using Gtk;
 
-class BacktraceViewerWindow : Window {
+class BacktraceViewerComponent : ShellComponent {
 	TimeData data;
 	TypeTabulator t;
 	BacktraceTabulator bt;
@@ -14,11 +14,14 @@ class BacktraceViewerWindow : Window {
 	
 	
 	
-	public BacktraceViewerWindow (TimeData data, TypeTabulator t) : base ("")
+	public BacktraceViewerComponent (TimeData data, TypeTabulator t)
 	{
+		
 		this.data = data;
 		this.t = t;
 		this.bt = new BacktraceTabulator (t, data.ContextData);
+		
+		Title = string.Format ("Heap at {0} ms", data.Time);
 		
 		box = new VBox ();
 		box.Spacing = 12;
@@ -33,7 +36,7 @@ class BacktraceViewerWindow : Window {
 		sw.Add (ns.GetNodeView ());
 		box.PackStart (sw, true, true, 0);
 		
-		Title = string.Format ("Heap at {0} ms", data.Time);
+		
 	}
 	
 	Widget CreateHeader ()

@@ -1,3 +1,12 @@
+2005-01-11  Ben Maurer  <bmaurer@ximian.com>
+
+	* Shell.cs, ShellComponent.cs, ShellPager.cs: Some new code to
+	make a tabbed interface
+
+	* BacktraceViewer.cs, TypeGraphViewer.cs: adapt to new code
+
+	* shell-ui.xml: New file for UI
+
 2005-01-10  Ben Maurer  <bmaurer@ximian.com>
 
 	* TypeGraphViewer.cs: More reasonable default sizes

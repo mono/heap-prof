@@ -6,36 +6,22 @@ using Gtk;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-class X {
-	static DrawingArea d;
-	static TypeTabulator t;
-	static TypeList tl;
-	static HPaned paned;
+class TypeGraphComponent : ShellComponent {
+	DrawingArea d;
+	TypeTabulator t;
+	TypeList tl;
+	HPaned paned;
 	
-	static void Main (string [] args)
+	public TypeGraphComponent (TypeTabulator t)
 	{
-		int b = Environment.TickCount;
-		t = new TypeTabulator (args [0]);
-		t.Read ();
-		t.Process ();
-		//t.Dump ();
+		Title = "Type Graph";
+		
+		this.t = t;
 		tl = new TypeList (t);
-		
-		Console.WriteLine (Environment.TickCount - b);
-		
-		RunGtk ();
-	}
-	
-	static void RunGtk ()
-	{
-		Application.Init ();
-		Gtk.Window w = new Gtk.Window ("Ben's little profiler");
-		
-		w.DeleteEvent += Window_Delete;
 		
 		paned = new HPaned ();
 		
-		d = new PrettyGraphic (t, tl);
+		d = new PrettyGraphic (t, tl, this);
 		
 		
 		
@@ -46,16 +32,7 @@ class X {
 		paned.Pack2 (sw, false, true);
 
 
-		w.Add (paned);
-		
-		w.ShowAll ();
-		Application.Run ();
-	}
-
-	static void Window_Delete (object obj, DeleteEventArgs args)
-	{
-		Application.Quit ();
-		args.RetVal = true;
+		Add (paned);
 	}
 }
 
@@ -184,13 +161,15 @@ class PrettyGraphic : DrawingArea {
 	Gdk.Rectangle current_allocation;	// The current allocation. 
 	bool allocated = false;
 	Plotter plot;
+	TypeGraphComponent parent;
 	
-	public PrettyGraphic (TypeTabulator t, TypeList tl)
+	public PrettyGraphic (TypeTabulator t, TypeList tl, TypeGraphComponent parent)
 	{
 		Events |= Gdk.EventMask.ButtonPressMask;
 		
 		this.t = t;
 		this.tl = tl;
+		this.parent = parent;
 		SetSizeRequest (700, 700);
 	}
 			       
@@ -245,7 +224,7 @@ class PrettyGraphic : DrawingArea {
 			if (tp.X >= e.X) {
 				Console.WriteLine ("Found {0}", tp.Time);
 				
-				new BacktraceViewerWindow (tp.Data, t).ShowAll ();
+				parent.Parent.Add (new BacktraceViewerComponent (tp.Data, t));
 				
 				break;
 			}
