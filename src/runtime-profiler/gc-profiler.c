@@ -101,7 +101,7 @@ get_delta_t (MonoProfiler *p)
 }
 
 static guint64
-write (MonoProfiler* p, gconstpointer data, guint32 size)
+prof_write (MonoProfiler* p, gconstpointer data, guint32 size)
 {
 	guint32 offset = p->foffset;
 	p->foffset += size;
@@ -247,7 +247,7 @@ write_allocation (MonoProfiler *p, MonoObject *obj, MonoClass *klass)
 	rec.time = leu32  (get_delta_t (p));
 	rec.alloc_ctx = leu32  (get_ctx_idx (p, &c));
 
-	offset = write (p, &rec, sizeof (rec));
+	offset = prof_write (p, &rec, sizeof (rec));
 	
 	arec->rec.time = rec.time;
 	arec->rec.alloc_ctx = rec.alloc_ctx;
@@ -269,14 +269,14 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 	rec.time = leu32 (get_delta_t (p) | (1 << 31));
 	rec.gc_num = leu32 (gc_num);
 
-	write (p, &rec, sizeof (rec));
+	prof_write (p, &rec, sizeof (rec));
 	
 	AllocRec *l, *next = NULL, *prev = NULL;
 	for (l = p->live_allocs; l; l = next) {
 		next = l->next;
 		
 		if (! mono_profiler_mark_set (l->obj)) {
-			write (p, &l->rec, sizeof (l->rec));
+			prof_write (p, &l->rec, sizeof (l->rec));
 			
 			if (prev)
 				prev->next = next;
@@ -290,7 +290,7 @@ prof_marks_set (MonoProfiler *p, int gc_num)
 	
 	{
 		HeapProfGcFreedRec null = {0};
-		write (p, &null, sizeof (null));
+		prof_write (p, &null, sizeof (null));
 	}
 	
 	hp_lock_leave ();
@@ -307,7 +307,7 @@ write_enc_int (MonoProfiler*p, int v)
 			b = (guint8) (b | 0x80);
 		}
 
-		write (p, &b, sizeof (b));
+		prof_write (p, &b, sizeof (b));
 		v = high;
 	} while (v);
 }
@@ -317,14 +317,14 @@ write_string_table (MonoProfiler* p, GPtrArray* arr)
 {
 	int i;
 	guint32 size = leu32 (arr->len);
-	write (p, &size, sizeof (size));
+	prof_write (p, &size, sizeof (size));
 	
 	for (i = 0; i < arr->len; i ++) {
 		char* s = g_ptr_array_index (arr, i);
 		int l = strlen (s);
 		
 		write_enc_int (p, l);
-		write (p, s, l);
+		prof_write (p, s, l);
 	}
 }
 
@@ -334,11 +334,11 @@ write_bt_table (MonoProfiler* p)
 	GPtrArray* arr = p->bt_table;
 	int i;
 	guint32 size = leu32 (arr->len);
-	write (p, &size, sizeof (size));
+	prof_write (p, &size, sizeof (size));
 	
 	for (i = 0; i < arr->len; i ++) {
 		IdxBacktrace* b = g_ptr_array_index (arr, i);
-		write (p, b, sizeof (*b));
+		prof_write (p, b, sizeof (*b));
 	}
 }
 
@@ -349,13 +349,13 @@ write_ctx_table (MonoProfiler* p)
 	int i;
 	guint32 size = leu32 (arr->len);
 	
-	write (p, &size, sizeof (size));
+	prof_write (p, &size, sizeof (size));
 	
 	for (i = 0; i < arr->len; i ++) {
 		IdxAllocationCtx* c = g_ptr_array_index (arr, i);
 
 		
-		write (p, c, sizeof (*c));
+		prof_write (p, c, sizeof (*c));
 	}
 }
 
@@ -366,7 +366,7 @@ write_meta_header (MonoProfiler* p)
 	
 	memcpy (h.signature, heap_prof_md_sig, sizeof (heap_prof_md_sig));
 	h.version = leu32 (heap_prof_version);
-	write (p, &h, sizeof (h));
+	prof_write (p, &h, sizeof (h));
 
 }
 
@@ -388,13 +388,13 @@ mono_heap_prof_shutdown (MonoProfiler *p)
 	guint32 eofevent = -1;
 	guint64 meta_offset;
 	
-	meta_offset = write (p, &eofevent, sizeof (eofevent)) + sizeof (eofevent);
+	meta_offset = prof_write (p, &eofevent, sizeof (eofevent)) + sizeof (eofevent);
 	
 	write_metadata_file (p);
 	
 	meta_offset = leu64 (meta_offset);
 	
-	write (p, &meta_offset, sizeof (meta_offset));
+	prof_write (p, &meta_offset, sizeof (meta_offset));
 	
 	fclose (p->out);
 }
@@ -406,7 +406,7 @@ write_header (MonoProfiler* p)
 	
 	memcpy (h.signature, heap_prof_dump_sig, sizeof (heap_prof_dump_sig));
 	h.version = leu32 (heap_prof_version);
-	write (p, &h, sizeof (h));
+	prof_write (p, &h, sizeof (h));
 }
 
 static guint
