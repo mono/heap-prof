@@ -1,3 +1,8 @@
+2005-03-29  Ben Maurer  <bmaurer@ximian.com>
+
+	* configure.in: Hopefully, fix problems with missing .so stuff. I
+	love Zoltan!
+
 2005-03-10  Ben Maurer  <bmaurer@ximian.com>
 
 	* configure.in: New hackish heap dumping profiler.
