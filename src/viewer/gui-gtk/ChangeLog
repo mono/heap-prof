@@ -1,7 +1,9 @@
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>
 
-	* Shell.cs: Prevent flicker
+	* Shell.cs: Use file chooser. Other misc ui crap
 	
+	* Shell.cs: Prevent flicker
+
 	* Shell.cs, ShellComponent.cs, ShellPager.cs: Some new code to
 	make a tabbed interface
 

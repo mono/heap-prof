@@ -20,7 +20,8 @@ class Shell : Window {
 		Application.Init ();
 		s = new Shell ();
 		
-		s.Open (args [0]);
+		if (args.Length > 1)
+			s.Open (args [0]);
 		s.ShowAll ();
 		Application.Run ();
 	}
@@ -34,7 +35,7 @@ class Shell : Window {
 			new ActionEntry ("QuitAction", Stock.Quit, null, "<control>Q", "Quit the application", delegate { Application.Quit (); }),
 		};
 
-		DefaultSize = new Gdk.Size (200, 150);
+		DefaultSize = new Gdk.Size (700, 700);
 		DeleteEvent += delegate { Application.Quit (); };
 		
 		main_box = new VBox (false, 0);
@@ -49,9 +50,11 @@ class Shell : Window {
 			main_box.PackStart (args.Widget, false, true, 0);
 		};
 		
+		
 		uim.ConnectProxy += OnProxyConnect;
 		uim.InsertActionGroup (shell_commands, 0);
 		uim.AddUiFromResource ("shell-ui.xml");
+		AddAccelGroup (uim.AccelGroup);
 		
 		sb = new Statusbar ();
 		main_box.PackEnd (sb, false, true, 0);
@@ -75,7 +78,20 @@ class Shell : Window {
 	
 	void OnOpen (object obj, EventArgs args)
 	{
-		Console.WriteLine ("open");
+		string s = null;
+		
+		using (FileChooserDialog fd = new FileChooserDialog ("Select a profile", this, FileChooserAction.Open)) {
+			fd.AddButton (Gtk.Stock.Cancel, Gtk.ResponseType.Cancel);
+			fd.AddButton (Gtk.Stock.Open, Gtk.ResponseType.Ok);
+			
+			if (fd.Run () == (int) ResponseType.Ok)
+				s = fd.Filename;
+			
+			fd.Destroy ();
+		}
+		
+		if (s != null)
+			Open (s);
 	}
 	
 	void OnProxyConnect (object obj, ConnectProxyArgs args)
@@ -100,8 +116,9 @@ class Shell : Window {
 		sc.parent = this;
 		int pos = pager.AppendPage (sc, new Label (""));
 		TitleChanged (sc);
-		pager.CurrentPage = pos;
+		
 		pager.ShowAll ();
+		pager.CurrentPage = pos;
 	}
 	
 	public void TitleChanged (ShellComponent sc)
