@@ -20,7 +20,7 @@ class Shell : Window {
 		Application.Init ();
 		s = new Shell ();
 		
-		if (args.Length > 1)
+		if (args.Length == 1)
 			s.Open (args [0]);
 		s.ShowAll ();
 		Application.Run ();
