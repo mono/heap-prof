@@ -228,6 +228,7 @@ class TypeGrpah : DrawingArea {
 						graph_area.Width, graph_area.Height);
 
 		DrawXScale (area);
+		DrawYScale (area);
 		
 		return true;
 	}
@@ -279,10 +280,47 @@ class TypeGrpah : DrawingArea {
 		}
 	}
 	
+	string FormatBytes (int b)
+	{
+		const int K = 1024;
+		const int M = K * 1024;
+		
+		if (b > M)
+			return String.Format ("{0:0.0} MB", (double) b / M);
+		else
+			return String.Format ("{0:0} KB", (double) b / K);
+	}
+	
+	void DrawYScale (Gdk.Rectangle area)
+	{
+		const int tick_space = 15;
+		const int major_tick_freq = 5;
+		const int minor_tick_width = 5;
+		const int major_tick_width = 10;
+		
+		int ds = ((parent.Profile.MaxSize) / y_scale.Height) * tick_space;
+		
+		for (int i = 0; i < y_scale.Height / tick_space; i ++) {
+			if (i % major_tick_freq == 0) {
+				
+				Pango.Layout layout = this.CreatePangoLayout (FormatBytes (ds * i));
+				
+				int w, h;
+				
+				layout.GetPixelSize (out w, out h);
+				
+				GdkWindow.DrawLayout (Style.BlackGC,  y_scale.Left,  y_scale.Bottom - i * tick_space, layout);			
+				GdkWindow.DrawLine (Style.BlackGC, y_scale.Right, y_scale.Bottom - i * tick_space, y_scale.Right - major_tick_width, y_scale.Bottom - i * tick_space);
+			} else {
+				GdkWindow.DrawLine (Style.BlackGC, y_scale.Right, y_scale.Bottom - i * tick_space, y_scale.Right - minor_tick_width, y_scale.Bottom - i * tick_space);
+			}
+		}
+	}
+	
 	protected override void OnSizeAllocated (Gdk.Rectangle allocation)
 	{
 		
-		int x_scale_size = 30, y_scale_size = 10;
+		int x_scale_size = 30, y_scale_size = 50;
 		
 		y_scale = new Gdk.Rectangle (0, 0, y_scale_size, allocation.Height - x_scale_size);
 		x_scale = new Gdk.Rectangle (y_scale_size, allocation.Height - x_scale_size, allocation.Width - y_scale_size, x_scale_size);

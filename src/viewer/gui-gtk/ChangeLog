@@ -1,3 +1,7 @@
+2005-03-24  Ben Maurer  <bmaurer@ximian.com>
+
+	* TypeGraphViewer.cs: And now the y axis :-).
+
 2005-03-23  Ben Maurer  <bmaurer@ximian.com>
 
 	* TypeGraphViewer.cs: Create a scale for the x axis.
