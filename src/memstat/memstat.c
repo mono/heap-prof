@@ -15,10 +15,10 @@ size_to_units (int size, double* out_size, const char** out_units)
 		*out_size = size;
 		*out_units = "B";
 	} else if (size < MB) {
-		*out_size = size / KB;
+		*out_size = (double) size / (double) KB;
 		*out_units = "KB";
 	} else {
-		*out_size = size / MB;
+		*out_size = (double) size / (double) MB;
 		*out_units = "MB";
 	}
 }
