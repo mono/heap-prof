@@ -1,6 +1,9 @@
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>
 
+	* mono-heap-prof-view.exe.config: not needed
+	
 	* Makefile.am: Add new files
+	(mono_heap_prof_viewdir_DATA): no longer needed 
 
 2005-01-09  Ben Maurer  <bmaurer@ximian.com>
 

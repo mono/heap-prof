@@ -1,7 +1,6 @@
 CLEANFILES = mono-heap-prof-view.exe mono-heap-prof-view
 
 mono_heap_prof_view_SCRIPTS = mono-heap-prof-view.exe
-mono_heap_prof_view_DATA = mono-heap-prof-view.exe.config
 mono_heap_prof_viewdir = $(prefix)/lib/mono-heap-prof
 
 common_sources = \

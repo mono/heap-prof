@@ -1,5 +1,7 @@
 2005-01-11  Ben Maurer  <bmaurer@ximian.com>
 
+	* TypeGraphViewer.cs: The gdk hack is in gtk# now. yay
+
 	* Shell.cs: Use file chooser. Other misc ui crap
 	
 	* Shell.cs: Prevent flicker
