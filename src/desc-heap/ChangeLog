@@ -1,3 +1,8 @@
+2005-07-26  Ben Maurer  <bmaurer@ximian.com>
+
+	* desc-heap.c: Patch from Brion Vibber. Don't use obsolete
+	function.
+
 2005-03-10  Ben Maurer  <bmaurer@ximian.com>
 
 	* desc-heap.c: A profiler for trow.

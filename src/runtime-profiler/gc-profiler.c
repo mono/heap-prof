@@ -211,7 +211,7 @@ get_type_idx (MonoProfiler *p, MonoClass* klass)
 	guint32 idx_plus_one;
 	
 	if (!(idx_plus_one = GPOINTER_TO_UINT (g_hash_table_lookup (p->klass_to_table_idx, klass)))) {
-		char* name = mono_type_get_full_name (mono_class_get_type (klass));
+		char* name = mono_type_get_name_full (mono_class_get_type (klass));
 		g_ptr_array_add (p->klass_table, name);
 		idx_plus_one = p->klass_table->len;
 		

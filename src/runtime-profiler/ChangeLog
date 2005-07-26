@@ -1,3 +1,8 @@
+2005-07-26  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c: Patch from Brion Vibber Don't use obsolete
+	function.
+
 2005-03-28  Ben Maurer  <bmaurer@ximian.com>
 
 	* gc-profiler.c: Write out summarized type allocation data.
