@@ -25,9 +25,13 @@ typedef enum {
 	HEAP_PROF_EVENT_CHECKPOINT = 2
 } HeapProfEvent;
 
+typedef guint32 HeapProfEvent32;
+
 typedef struct AllocRec AllocRec;
 
-typedef struct {
+#define PACK __attribute__ ((packed))
+
+typedef struct PACK {
 	guint64 alloc_pos;
 	guint32 time;
 	guint32 alloc_ctx;
@@ -99,45 +103,45 @@ static const guint32 heap_prof_version = 6;
 
 #define CHECKPOINT_SPACING (1024*1024) /* 1 MB */
 
-typedef struct {
+typedef struct PACK {
 	guint8 signature [16];
 	guint32 version;
 } HeapProfHeader;
 
-typedef struct {
+typedef struct PACK {
 	guint32 time;
 	guint32 alloc_ctx;
 } HeapProfAllocationRec;
 
 
-typedef struct {
+typedef struct PACK {
 	guint32 time;
-	HeapProfEvent event;
+	HeapProfEvent32 event;
 	guint32 event_num;
 	
 	guint32 context_size;
 	guint32 type_size;
 } HeapProfCheckpointRec;
 
-typedef struct {
+typedef struct PACK {
 	guint32 time;
-	HeapProfEvent event;
+	HeapProfEvent32 event;
 	guint32 event_num;
 	
 	HeapProfGcFreedRec freed [MONO_ZERO_LEN_ARRAY];
 } HeapProfGCRec;
 
-typedef struct {
+typedef struct PACK {
 	guint32 time;
-	HeapProfEvent event;
+	HeapProfEvent32 event;
 	guint32 event_num;
 	
 	guint32 new_size;
 } HeapProfHeapResizeRec;
 
-typedef struct {
+typedef struct PACK {
 	guint32 time;
-	HeapProfEvent event;
+	HeapProfEvent32 event;
 	guint32 size_high;
 	guint32 size_low;
 	
@@ -163,7 +167,7 @@ typedef struct {
 	MonoMethod* methods [BT_SIZE];
 } Backtrace;
 
-typedef struct {
+typedef struct PACK {
 	guint32 len;
 	guint32 methods [BT_SIZE];
 } IdxBacktrace;
