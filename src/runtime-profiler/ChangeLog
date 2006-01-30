@@ -1,3 +1,8 @@
+2006-01-30  Ben Maurer  <bmaurer@ximian.com>
+
+	* gc-profiler.c: Patch from Max Kellermann <max@duempel.org> to
+	fix mono_type_get_name_full.
+
 2005-10-07  Ben Maurer  <bmaurer@ximian.com>
 
 	* gc-profiler.c: Patch from Michal Moskal to make sure things work

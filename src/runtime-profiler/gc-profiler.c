@@ -20,6 +20,16 @@
 #define leu64 GINT64_TO_LE
 
 typedef enum {
+	MONO_TYPE_NAME_FORMAT_IL,
+	MONO_TYPE_NAME_FORMAT_REFLECTION,
+	MONO_TYPE_NAME_FORMAT_FULL_NAME,
+	MONO_TYPE_NAME_FORMAT_ASSEMBLY_QUALIFIED
+} MonoTypeNameFormat;
+
+char*
+mono_type_get_name_full (MonoType *type, MonoTypeNameFormat format);
+
+typedef enum {
 	HEAP_PROF_EVENT_GC = 0,
 	HEAP_PROF_EVENT_RESIZE_HEAP = 1,
 	HEAP_PROF_EVENT_CHECKPOINT = 2
@@ -215,7 +225,7 @@ get_type_idx (MonoProfiler *p, MonoClass* klass)
 	guint32 idx_plus_one;
 	
 	if (!(idx_plus_one = GPOINTER_TO_UINT (g_hash_table_lookup (p->klass_to_table_idx, klass)))) {
-		char* name = mono_type_get_name_full (mono_class_get_type (klass));
+		char* name = mono_type_get_name_full (mono_class_get_type (klass), MONO_TYPE_NAME_FORMAT_FULL_NAME);
 		g_ptr_array_add (p->klass_table, name);
 		idx_plus_one = p->klass_table->len;
 		
